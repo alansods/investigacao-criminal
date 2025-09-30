@@ -172,7 +172,6 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
     setEditingClueId(null);
   };
 
-
   const handleDeleteGroup = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();

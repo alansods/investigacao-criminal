@@ -23,7 +23,6 @@ import {
   useSensors,
   useSensor,
   PointerSensor,
-  closestCenter,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -419,9 +418,13 @@ const InvestigationCanvas = () => {
   }, []);
 
   const onDragStart = (event: DragStartEvent) => {
-    if (event.active.data.current) {
+    const { active } = event;
+
+    // Verificar se é uma categoria (toolbox) ou pista
+    if (active.data.current && active.data.current.type) {
+      // É uma categoria do toolbox
       setDraggedNode(
-        event.active.data.current as {
+        active.data.current as {
           id: string;
           type: string;
           label: string;
@@ -429,6 +432,13 @@ const InvestigationCanvas = () => {
           color: string;
         }
       );
+
+      // Adicionar cursor de drag global
+      document.body.style.cursor = "grabbing";
+    } else {
+      // É uma pista
+      setDraggedItem(String(active.id));
+      document.body.style.cursor = "grabbing";
     }
 
     const activator = event.activatorEvent as MouseEvent | undefined;
@@ -444,24 +454,12 @@ const InvestigationCanvas = () => {
   };
 
   const onDragEnd = (event: DragEndEvent) => {
-    const { active } = event;
+    const { active, over } = event;
+
+    // Limpar estados e cursor
     setDraggedNode(null);
-
-    // Se não há active.data.current, não é um item do toolbox
-    if (!active.data.current) return;
-
-    // Se não há reactFlowInstance, não podemos calcular a posição
-    if (!reactFlowInstance) return;
-
-    const bounds = reactFlowWrapper.current?.getBoundingClientRect();
-    if (!bounds) return;
-    const clientX = pointerPos?.x ?? mousePosition.x;
-    const clientY = pointerPos?.y ?? mousePosition.y;
-    // Converter coordenadas de tela -> posição no flow
-    const position = reactFlowInstance.screenToFlowPosition({
-      x: clientX - bounds.left,
-      y: clientY - bounds.top,
-    });
+    setDraggedItem(null);
+    document.body.style.cursor = "";
 
     // Cleanup pointer listener
     const stored = (window as any)._rf_handlePointerMove as (
@@ -473,24 +471,101 @@ const InvestigationCanvas = () => {
     }
     setPointerPos(null);
 
-    const newNode: Node = {
-      id: `group-${Date.now()}`,
-      type: active.data.current.type,
-      position,
-      data: {
-        label: active.data.current.label,
-        description: `Nova categoria de ${active.data.current.label.toLowerCase()}`,
-        color: active.data.current.color,
-        icon: active.data.current.icon,
-        clues: [],
-      },
-    };
+    // Se é uma categoria do toolbox sendo arrastada para o canvas
+    if (active.data.current && active.data.current.type) {
+      // Se não há reactFlowInstance, não podemos calcular a posição
+      if (!reactFlowInstance) return;
 
-    setNodes((nds) => [...nds, newNode]);
+      const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const clientX = pointerPos?.x ?? mousePosition.x;
+      const clientY = pointerPos?.y ?? mousePosition.y;
+      // Converter coordenadas de tela -> posição no flow
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: clientX - bounds.left,
+        y: clientY - bounds.top,
+      });
+
+      const newNode: Node = {
+        id: `group-${Date.now()}`,
+        type: active.data.current.type,
+        position,
+        data: {
+          label: active.data.current.label,
+          description: `Nova categoria de ${active.data.current.label.toLowerCase()}`,
+          color: active.data.current.color,
+          icon: active.data.current.icon,
+          clues: [],
+        },
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+      return;
+    }
+
+    // Se é uma pista sendo movida entre categorias (já tratado no DndContext interno)
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    // Se está arrastando para o mesmo item, não faz nada
+    if (activeId === overId) return;
+
+    // Encontrar os grupos de origem e destino
+    const sourceGroup = nodes.find((node) =>
+      (node.data as any).clues?.some((c: any) => c.id === activeId)
+    );
+
+    let targetGroup = nodes.find((node) =>
+      (node.data as any).clues?.some((c: any) => c.id === overId)
+    );
+
+    // Se não encontrou o grupo pelo clue, verifica se é uma zona de drop vazia
+    if (!targetGroup && overId.startsWith("empty-")) {
+      const groupId = overId.replace("empty-", "");
+      targetGroup = nodes.find((node) => node.id === groupId);
+    }
+
+    if (sourceGroup && targetGroup) {
+      if (sourceGroup.id !== targetGroup.id) {
+        // Movimento entre categorias diferentes
+        handleMoveClue(activeId, sourceGroup.id, targetGroup.id);
+      } else {
+        // Reordenação dentro da mesma categoria
+        const currentIds = ((sourceGroup.data as any).clues || []).map(
+          (c: any) => c.id
+        );
+        const from = currentIds.indexOf(activeId);
+        const to = currentIds.indexOf(overId);
+
+        if (from !== -1 && to !== -1) {
+          const reordered = [...currentIds];
+          const [moved] = reordered.splice(from, 1);
+          reordered.splice(to, 0, moved);
+          handleReorderClues(sourceGroup.id, reordered);
+        }
+      }
+    }
   };
 
   return (
-    <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={useSensors(
+        useSensor(PointerSensor, {
+          activationConstraint: {
+            distance: 8,
+          },
+        })
+      )}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => {
+        setDraggedNode(null);
+        setDraggedItem(null);
+        document.body.style.cursor = "";
+      }}
+    >
       <div className="flex h-full min-h-0">
         {/* Toolbox */}
         <div className="w-64 bg-muted/50 p-4 border-r">
@@ -549,155 +624,95 @@ const InvestigationCanvas = () => {
         </div>
 
         {/* Flow Canvas */}
-        <DndContext
-          sensors={useSensors(
-            useSensor(PointerSensor, {
-              activationConstraint: {
-                distance: 8,
-              },
-            })
+        <SortableContext
+          items={nodes.flatMap((node) =>
+            ((node.data as any).clues || []).map((clue: any) => clue.id)
           )}
-          collisionDetection={closestCenter}
-          onDragStart={({ active }) => {
-            setDraggedItem(String(active.id));
-            // Adicionar cursor de arrastar ao body durante o drag
-            document.body.style.cursor = "grabbing";
-          }}
-          onDragCancel={() => {
-            setDraggedItem(null);
-            // Restaurar cursor normal em caso de cancelamento
-            document.body.style.cursor = "";
-          }}
-          onDragEnd={({ active, over }) => {
-            setDraggedItem(null);
-            // Restaurar cursor normal
-            document.body.style.cursor = "";
-
-            if (!over) return;
-
-            const activeId = String(active.id);
-            const overId = String(over.id);
-
-            // Se está arrastando para o mesmo item, não faz nada
-            if (activeId === overId) return;
-
-            // Encontrar os grupos de origem e destino
-            const sourceGroup = nodes.find((node) =>
-              (node.data as any).clues?.some((c: any) => c.id === activeId)
-            );
-
-            let targetGroup = nodes.find((node) =>
-              (node.data as any).clues?.some((c: any) => c.id === overId)
-            );
-
-            // Se não encontrou o grupo pelo clue, verifica se é uma zona de drop vazia
-            if (!targetGroup && overId.startsWith("empty-")) {
-              const groupId = overId.replace("empty-", "");
-              targetGroup = nodes.find((node) => node.id === groupId);
-            }
-
-            if (sourceGroup && targetGroup) {
-              if (sourceGroup.id !== targetGroup.id) {
-                // Movimento entre categorias diferentes
-                handleMoveClue(activeId, sourceGroup.id, targetGroup.id);
-              } else {
-                // Reordenação dentro da mesma categoria
-                const currentIds = ((sourceGroup.data as any).clues || []).map(
-                  (c: any) => c.id
-                );
-                const from = currentIds.indexOf(activeId);
-                const to = currentIds.indexOf(overId);
-
-                if (from !== -1 && to !== -1) {
-                  const reordered = [...currentIds];
-                  const [moved] = reordered.splice(from, 1);
-                  reordered.splice(to, 0, moved);
-                  handleReorderClues(sourceGroup.id, reordered);
-                }
-              }
-            }
-          }}
+          strategy={verticalListSortingStrategy}
         >
-          <SortableContext
-            items={nodes.flatMap((node) =>
-              ((node.data as any).clues || []).map((clue: any) => clue.id)
-            )}
-            strategy={verticalListSortingStrategy}
-          >
-            <DroppableReactFlow onMouseMove={handleMouseMove}>
-              <div ref={reactFlowWrapper} className="w-full h-full min-h-0">
-                <ReactFlow
-                  nodes={nodes.map((node) => ({
-                    ...node,
-                    data: {
-                      ...node.data,
-                      onDeleteGroup: handleDeleteGroup,
-                      onDeleteClue: handleDeleteClue,
-                      onAddClue: handleAddClue,
-                      onReorderClues: handleReorderClues,
-                      onMoveClue: handleMoveClue,
-                      groupId: node.id,
-                      draggedItem: draggedItem,
-                    },
-                  }))}
-                  edges={edges}
-                  onNodesChange={onNodesChange}
-                  onEdgesChange={onEdgesChange}
-                  onConnect={onConnect}
-                  onEdgeClick={onEdgeClick}
-                  onInit={setReactFlowInstance}
-                  nodeTypes={nodeTypes}
-                  fitView={false}
-                  className="bg-background"
-                  defaultEdgeOptions={{
-                    type: "smoothstep",
-                    style: {
-                      strokeWidth: 2,
-                    },
-                    markerEnd: {
-                      type: "arrowclosed",
-                    },
-                  }}
-                >
-                  <Controls />
-                  <MiniMap />
-                  <Background
-                    variant={BackgroundVariant.Dots}
-                    gap={12}
-                    size={1}
-                  />
-                </ReactFlow>
-              </div>
-            </DroppableReactFlow>
-          </SortableContext>
+          <DroppableReactFlow onMouseMove={handleMouseMove}>
+            <div ref={reactFlowWrapper} className="w-full h-full min-h-0">
+              <ReactFlow
+                nodes={nodes.map((node) => ({
+                  ...node,
+                  data: {
+                    ...node.data,
+                    onDeleteGroup: handleDeleteGroup,
+                    onDeleteClue: handleDeleteClue,
+                    onAddClue: handleAddClue,
+                    onReorderClues: handleReorderClues,
+                    onMoveClue: handleMoveClue,
+                    groupId: node.id,
+                    draggedItem: draggedItem,
+                  },
+                }))}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onEdgeClick={onEdgeClick}
+                onInit={setReactFlowInstance}
+                nodeTypes={nodeTypes}
+                fitView={false}
+                className="bg-background"
+                defaultEdgeOptions={{
+                  type: "smoothstep",
+                  style: {
+                    strokeWidth: 2,
+                  },
+                  markerEnd: {
+                    type: "arrowclosed",
+                  },
+                }}
+              >
+                <Controls />
+                <MiniMap />
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={12}
+                  size={1}
+                />
+              </ReactFlow>
+            </div>
+          </DroppableReactFlow>
+        </SortableContext>
 
-          <DragOverlay>
-            {draggedItem
-              ? (() => {
-                  // Encontrar a pista sendo arrastada
-                  const draggedClue = nodes
-                    .flatMap((node) => (node.data as any).clues || [])
-                    .find((clue: any) => clue.id === draggedItem);
+        <DragOverlay>
+          {draggedNode ? (
+            <div className="opacity-90">
+              <InvestigationToolbox
+                id={draggedNode.id}
+                type={draggedNode.type}
+                label={draggedNode.label}
+                icon={draggedNode.icon}
+                color={draggedNode.color}
+              />
+            </div>
+          ) : draggedItem ? (
+            (() => {
+              // Encontrar a pista sendo arrastada
+              const draggedClue = nodes
+                .flatMap((node) => (node.data as any).clues || [])
+                .find((clue: any) => clue.id === draggedItem);
 
-                  return (
-                    <div className="bg-white border-2 border-blue-500 rounded-lg shadow-xl p-3 opacity-95 min-w-[200px]">
-                      <div className="flex items-start gap-2">
-                        <div className="w-4 h-4 bg-blue-500 rounded mt-0.5"></div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm text-gray-800">
-                            {draggedClue?.title || "Pista"}
-                          </h4>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                            {draggedClue?.content || "Movendo pista..."}
-                          </p>
-                        </div>
-                      </div>
+              return (
+                <div className="bg-white border-2 border-blue-500 rounded-lg shadow-xl p-3 opacity-95 min-w-[200px]">
+                  <div className="flex items-start gap-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded mt-0.5"></div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm text-gray-800">
+                        {draggedClue?.title || "Pista"}
+                      </h4>
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                        {draggedClue?.content || "Movendo pista..."}
+                      </p>
                     </div>
-                  );
-                })()
-              : null}
-          </DragOverlay>
-        </DndContext>
+                  </div>
+                </div>
+              );
+            })()
+          ) : null}
+        </DragOverlay>
       </div>
 
       {/* Delete Connection Modal */}
@@ -709,20 +724,6 @@ const InvestigationCanvas = () => {
         sourceNode={deleteModal.edge?.source}
         targetNode={deleteModal.edge?.target}
       />
-
-      <DragOverlay>
-        {draggedNode ? (
-          <div className="opacity-50">
-            <InvestigationToolbox
-              id={draggedNode.id}
-              type={draggedNode.type}
-              label={draggedNode.label}
-              icon={draggedNode.icon}
-              color={draggedNode.color}
-            />
-          </div>
-        ) : null}
-      </DragOverlay>
     </DndContext>
   );
 };
