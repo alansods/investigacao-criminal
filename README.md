@@ -32,6 +32,7 @@ Um aplicativo moderno para organização e visualização de investigações cri
   - Reordene pistas dentro da mesma categoria
   - Mova pistas entre categorias diferentes
 - **Exclusão**: Remova pistas individualmente
+- **Tooltips Informativos**: Hover nos botões para ver descrições claras
 
 ### 🔗 Conexões Inteligentes
 - **Conexões Direcionais**: Conecte categorias através de pontos de conexão
@@ -95,7 +96,8 @@ src/
 │   │   ├── dialog.tsx
 │   │   ├── input.tsx
 │   │   ├── select.tsx
-│   │   └── textarea.tsx
+│   │   ├── textarea.tsx
+│   │   └── tooltip.tsx
 │   ├── InvestigationCanvas.tsx  # Canvas principal com React Flow
 │   ├── InvestigationNode.tsx    # Componente de categoria/card
 │   ├── InvestigationToolbox.tsx # Item draggable da toolbox
@@ -136,8 +138,9 @@ src/
 ### 4. Organizar Pistas
 - **Reordenar**: Clique no ícone de arrastar (≡) e mova para cima ou para baixo
 - **Mover entre categorias**: Arraste uma pista para outra categoria
-- **Editar**: Clique no ícone de lápis para editar
-- **Excluir**: Clique no ícone de lixeira para remover
+- **Editar**: Clique no ícone de lápis para editar (tooltip: "Editar pista")
+- **Excluir**: Clique no ícone de lixeira para remover (tooltip: "Deletar pista")
+- **Tooltips**: Passe o mouse sobre os botões para ver suas funções
 
 ### 5. Navegação
 - **Mover canvas**: Clique e arraste em um espaço vazio
@@ -189,6 +192,7 @@ Categoria para organizar eventos temporalmente
 - Use cores diferentes para identificar tipos de evidências rapidamente
 - Salve regularmente para não perder seu trabalho
 - Use conexões para mostrar relações entre evidências, testemunhos e suspeitos
+- Passe o mouse sobre os botões para ver tooltips informativos
 - O botão "Ajuda" na barra lateral contém todas as instruções detalhadas
 
 ## 🔧 Configuração
@@ -227,6 +231,7 @@ O projeto está configurado com:
 - [ ] Busca e filtros de pistas
 - [ ] Tags e categorização adicional
 - [ ] Anexos de arquivos reais
+- [x] Tooltips informativos nos botões
 
 ## 🤝 Contribuição
 

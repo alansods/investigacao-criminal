@@ -2,6 +2,12 @@ import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Plus, Trash2, Pencil, GripVertical } from "lucide-react";
 import { MediaIcon } from "./MediaIcon";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
@@ -100,27 +106,47 @@ function SortableClue({
               </div>
             </div>
             <div className="flex gap-1 items-center">
-              <button
-                onClick={(e) => onEdit(clue.id, e)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded flex items-center justify-center"
-              >
-                <Pencil className="h-3 w-3 text-gray-600" />
-              </button>
-              <button
-                onClick={(e) => onDelete(clue.id, e)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-600 flex items-center justify-center"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-              <button
-                {...attributes}
-                {...listeners}
-                className="p-1 ml-1 hover:bg-gray-100 rounded cursor-grab active:cursor-grabbing hover:cursor-grab"
-                aria-label="Arrastar pista"
-                title="Arrastar para mover entre categorias"
-              >
-                <GripVertical className="h-3 w-3 text-gray-500" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => onEdit(clue.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded flex items-center justify-center"
+                  >
+                    <Pencil className="h-3 w-3 text-gray-600" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Editar pista</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => onDelete(clue.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-600 flex items-center justify-center"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Deletar pista</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    {...attributes}
+                    {...listeners}
+                    className="p-1 ml-1 hover:bg-gray-100 rounded cursor-grab active:cursor-grabbing hover:cursor-grab"
+                    aria-label="Arrastar pista"
+                  >
+                    <GripVertical className="h-3 w-3 text-gray-500" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Arrastar para reordenar</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </CardContent>
@@ -242,278 +268,290 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
   };
 
   return (
-    <div className="relative">
-      <Card
-        className={`
+    <TooltipProvider>
+      <div className="relative">
+        <Card
+          className={`
           w-full min-w-[280px] max-w-[320px] 
           sm:min-w-[300px] sm:max-w-[350px]
           md:min-w-[320px] md:max-w-[380px]
           lg:min-w-[340px] lg:max-w-[400px]
           xl:min-w-[360px] xl:max-w-[420px]
           transition-all ${selected ? "ring-2 ring-blue-500" : ""} ${
-          isDragSource ? "ring-2 ring-orange-500 bg-orange-50" : ""
-        } ${
-          isDropTarget ? "ring-2 ring-green-500 bg-green-50 cursor-copy" : ""
-        }`}
-      >
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {nodeData.icon && (
-                <div className="flex-shrink-0">{nodeData.icon}</div>
-              )}
-              <CardTitle className="text-xs sm:text-sm font-medium">
-                {nodeData.label}
-              </CardTitle>
-              {isDragSource && (
-                <span className="text-xs bg-orange-100 text-orange-800 px-1 sm:px-2 py-1 rounded-full">
-                  Origem
-                </span>
-              )}
-              {isDropTarget && (
-                <span className="text-xs bg-green-100 text-green-800 px-1 sm:px-2 py-1 rounded-full">
-                  Destino
-                </span>
-              )}
+            isDragSource ? "ring-2 ring-orange-500 bg-orange-50" : ""
+          } ${
+            isDropTarget ? "ring-2 ring-green-500 bg-green-50 cursor-copy" : ""
+          }`}
+        >
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {nodeData.icon && (
+                  <div className="flex-shrink-0">{nodeData.icon}</div>
+                )}
+                <CardTitle className="text-xs sm:text-sm font-medium">
+                  {nodeData.label}
+                </CardTitle>
+                {isDragSource && (
+                  <span className="text-xs bg-orange-100 text-orange-800 px-1 sm:px-2 py-1 rounded-full">
+                    Origem
+                  </span>
+                )}
+                {isDropTarget && (
+                  <span className="text-xs bg-green-100 text-green-800 px-1 sm:px-2 py-1 rounded-full">
+                    Destino
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-0.5 sm:gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleDeleteGroup}
+                      className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Deletar grupo</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-            <div className="flex gap-0.5 sm:gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDeleteGroup}
-                className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-destructive hover:bg-destructive/10"
+            {nodeData.description && (
+              <p className="text-xs text-muted-foreground">
+                {nodeData.description}
+              </p>
+            )}
+          </CardHeader>
+
+          {nodeData.description && <hr className="border-border mb-6" />}
+
+          <CardContent className="pt-0 nodrag">
+            <div className="space-y-1 sm:space-y-2 min-h-[80px] sm:min-h-[100px]">
+              {/* Lista ordenável de pistas */}
+              <SortableContext
+                items={(nodeData.clues || []).map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-              </Button>
-            </div>
-          </div>
-          {nodeData.description && (
-            <p className="text-xs text-muted-foreground">
-              {nodeData.description}
-            </p>
-          )}
-        </CardHeader>
-
-        {nodeData.description && <hr className="border-border mb-6" />}
-
-        <CardContent className="pt-0 nodrag">
-          <div className="space-y-1 sm:space-y-2 min-h-[80px] sm:min-h-[100px]">
-            {/* Lista ordenável de pistas */}
-            <SortableContext
-              items={(nodeData.clues || []).map((c) => c.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {nodeData.clues && nodeData.clues.length > 0 ? (
-                nodeData.clues.map((clue) => (
-                  <div key={clue.id}>
-                    {editingClueId === clue.id ? (
-                      <Card className="border-2 border-blue-500 shadow-lg">
-                        <CardContent className="p-3 space-y-3">
-                          <input
-                            type="text"
-                            value={draftClue?.title ?? ""}
-                            onChange={(e) =>
-                              setDraftClue((prev) =>
-                                prev ? { ...prev, title: e.target.value } : prev
-                              )
-                            }
-                            className="w-full px-2 py-1 border rounded text-sm font-medium"
-                            placeholder="Título da pista"
-                          />
-
-                          <textarea
-                            value={draftClue?.content ?? ""}
-                            onChange={(e) =>
-                              setDraftClue((prev) =>
-                                prev
-                                  ? { ...prev, content: e.target.value }
-                                  : prev
-                              )
-                            }
-                            className="w-full px-2 py-1 border rounded text-sm min-h-[60px] resize-none"
-                            placeholder="Conteúdo da pista (opcional)"
-                          />
-
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={draftClue?.mediaType ?? "text"}
+                {nodeData.clues && nodeData.clues.length > 0 ? (
+                  nodeData.clues.map((clue) => (
+                    <div key={clue.id}>
+                      {editingClueId === clue.id ? (
+                        <Card className="border-2 border-blue-500 shadow-lg">
+                          <CardContent className="p-3 space-y-3">
+                            <input
+                              type="text"
+                              value={draftClue?.title ?? ""}
                               onChange={(e) =>
                                 setDraftClue((prev) =>
                                   prev
-                                    ? {
-                                        ...prev,
-                                        mediaType: e.target.value as MediaType,
-                                      }
+                                    ? { ...prev, title: e.target.value }
                                     : prev
                                 )
                               }
-                              className="px-2 py-1 border rounded text-xs"
-                            >
-                              <option value="text">Texto</option>
-                              <option value="image">Imagem</option>
-                              <option value="video">Vídeo</option>
-                              <option value="audio">Áudio</option>
-                            </select>
+                              className="w-full px-2 py-1 border rounded text-sm font-medium"
+                              placeholder="Título da pista"
+                            />
 
-                            {draftClue?.mediaType !== "text" && (
-                              <input
-                                type="url"
-                                value={draftClue?.mediaUrl || ""}
+                            <textarea
+                              value={draftClue?.content ?? ""}
+                              onChange={(e) =>
+                                setDraftClue((prev) =>
+                                  prev
+                                    ? { ...prev, content: e.target.value }
+                                    : prev
+                                )
+                              }
+                              className="w-full px-2 py-1 border rounded text-sm min-h-[60px] resize-none"
+                              placeholder="Conteúdo da pista (opcional)"
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={draftClue?.mediaType ?? "text"}
                                 onChange={(e) =>
                                   setDraftClue((prev) =>
                                     prev
-                                      ? { ...prev, mediaUrl: e.target.value }
+                                      ? {
+                                          ...prev,
+                                          mediaType: e.target
+                                            .value as MediaType,
+                                        }
                                       : prev
                                   )
                                 }
-                                placeholder="URL da mídia"
-                                className="flex-1 px-2 py-1 border rounded text-xs"
-                              />
-                            )}
-                          </div>
+                                className="px-2 py-1 border rounded text-xs"
+                              >
+                                <option value="text">Texto</option>
+                                <option value="image">Imagem</option>
+                                <option value="video">Vídeo</option>
+                                <option value="audio">Áudio</option>
+                              </select>
 
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={handleCancelEdit}
-                              className="px-3 py-1 text-xs border rounded hover:bg-gray-50"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              onClick={handleSaveEdit}
-                              disabled={!draftClue?.title.trim()}
-                              className={`px-3 py-1 text-xs rounded ${
-                                draftClue?.title.trim()
-                                  ? "bg-blue-500 text-white hover:bg-blue-600"
-                                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              }`}
-                            >
-                              Salvar
-                            </button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <SortableClue
-                        clue={clue}
-                        onEdit={handleStartEdit}
-                        onDelete={handleDeleteClue}
-                      />
-                    )}
-                  </div>
-                ))
-              ) : (
-                // Zona de drop para categoria vazia
-                <EmptyDropZone groupId={nodeData.groupId || ""} />
-              )}
-            </SortableContext>
+                              {draftClue?.mediaType !== "text" && (
+                                <input
+                                  type="url"
+                                  value={draftClue?.mediaUrl || ""}
+                                  onChange={(e) =>
+                                    setDraftClue((prev) =>
+                                      prev
+                                        ? { ...prev, mediaUrl: e.target.value }
+                                        : prev
+                                    )
+                                  }
+                                  placeholder="URL da mídia"
+                                  className="flex-1 px-2 py-1 border rounded text-xs"
+                                />
+                              )}
+                            </div>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleAddClue}
-              className="w-full h-8 sm:h-9"
-            >
-              <Plus className="h-3 w-3 mr-1 sm:mr-2" />
-              <span className="text-xs sm:text-sm">Adicionar Pista</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={handleCancelEdit}
+                                className="px-3 py-1 text-xs border rounded hover:bg-gray-50"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={handleSaveEdit}
+                                disabled={!draftClue?.title.trim()}
+                                className={`px-3 py-1 text-xs rounded ${
+                                  draftClue?.title.trim()
+                                    ? "bg-blue-500 text-white hover:bg-blue-600"
+                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                }`}
+                              >
+                                Salvar
+                              </button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <SortableClue
+                          clue={clue}
+                          onEdit={handleStartEdit}
+                          onDelete={handleDeleteClue}
+                        />
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  // Zona de drop para categoria vazia
+                  <EmptyDropZone groupId={nodeData.groupId || ""} />
+                )}
+              </SortableContext>
 
-      {/* Left Handle - both source and target */}
-      <Handle
-        id="left"
-        type="source"
-        position={Position.Left}
-        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
-        style={{ width: 10, height: 10 }}
-      />
-      <Handle
-        id="left-target"
-        type="target"
-        position={Position.Left}
-        className="bg-purple-500"
-        style={{ opacity: 0, width: 10, height: 10 }}
-      />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAddClue}
+                className="w-full h-8 sm:h-9"
+              >
+                <Plus className="h-3 w-3 mr-1 sm:mr-2" />
+                <span className="text-xs sm:text-sm">Adicionar Pista</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Right Handle - both source and target */}
-      <Handle
-        id="right"
-        type="source"
-        position={Position.Right}
-        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
-        style={{ width: 10, height: 10 }}
-      />
-      <Handle
-        id="right-target"
-        type="target"
-        position={Position.Right}
-        className="bg-purple-500"
-        style={{ opacity: 0, width: 10, height: 10 }}
-      />
+        {/* Left Handle - both source and target */}
+        <Handle
+          id="left"
+          type="source"
+          position={Position.Left}
+          className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+          style={{ width: 10, height: 10 }}
+        />
+        <Handle
+          id="left-target"
+          type="target"
+          position={Position.Left}
+          className="bg-purple-500"
+          style={{ opacity: 0, width: 10, height: 10 }}
+        />
 
-      {/* Top Handle - both source and target */}
-      <Handle
-        id="top"
-        type="source"
-        position={Position.Top}
-        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
-        style={{ width: 10, height: 10 }}
-      />
-      <Handle
-        id="top-target"
-        type="target"
-        position={Position.Top}
-        className="bg-purple-500"
-        style={{ opacity: 0, width: 10, height: 10 }}
-      />
+        {/* Right Handle - both source and target */}
+        <Handle
+          id="right"
+          type="source"
+          position={Position.Right}
+          className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+          style={{ width: 10, height: 10 }}
+        />
+        <Handle
+          id="right-target"
+          type="target"
+          position={Position.Right}
+          className="bg-purple-500"
+          style={{ opacity: 0, width: 10, height: 10 }}
+        />
 
-      {/* Bottom Handle - both source and target */}
-      <Handle
-        id="bottom"
-        type="source"
-        position={Position.Bottom}
-        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
-        style={{ width: 10, height: 10 }}
-      />
-      <Handle
-        id="bottom-target"
-        type="target"
-        position={Position.Bottom}
-        className="bg-purple-500"
-        style={{ opacity: 0, width: 10, height: 10 }}
-      />
+        {/* Top Handle - both source and target */}
+        <Handle
+          id="top"
+          type="source"
+          position={Position.Top}
+          className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+          style={{ width: 10, height: 10 }}
+        />
+        <Handle
+          id="top-target"
+          type="target"
+          position={Position.Top}
+          className="bg-purple-500"
+          style={{ opacity: 0, width: 10, height: 10 }}
+        />
 
-      {/* Modais de confirmação */}
-      <ConfirmDeleteModal
-        isOpen={deleteGroupModal}
-        onClose={() => setDeleteGroupModal(false)}
-        onConfirm={confirmDeleteGroup}
-        title="Deletar Grupo"
-        description="Tem certeza que deseja deletar este grupo?"
-        itemName={nodeData.label}
-        type="group"
-      />
+        {/* Bottom Handle - both source and target */}
+        <Handle
+          id="bottom"
+          type="source"
+          position={Position.Bottom}
+          className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+          style={{ width: 10, height: 10 }}
+        />
+        <Handle
+          id="bottom-target"
+          type="target"
+          position={Position.Bottom}
+          className="bg-purple-500"
+          style={{ opacity: 0, width: 10, height: 10 }}
+        />
 
-      <ConfirmDeleteModal
-        isOpen={deleteClueModal.isOpen}
-        onClose={() =>
-          setDeleteClueModal({ isOpen: false, clueId: "", clueName: "" })
-        }
-        onConfirm={confirmDeleteClue}
-        title="Deletar Pista"
-        description="Tem certeza que deseja deletar esta pista?"
-        itemName={deleteClueModal.clueName}
-        type="clue"
-      />
+        {/* Modais de confirmação */}
+        <ConfirmDeleteModal
+          isOpen={deleteGroupModal}
+          onClose={() => setDeleteGroupModal(false)}
+          onConfirm={confirmDeleteGroup}
+          title="Deletar Grupo"
+          description="Tem certeza que deseja deletar este grupo?"
+          itemName={nodeData.label}
+          type="group"
+        />
 
-      <AddClueModal
-        isOpen={addClueModal}
-        onClose={() => setAddClueModal(false)}
-        onSave={handleSaveClue}
-      />
-    </div>
+        <ConfirmDeleteModal
+          isOpen={deleteClueModal.isOpen}
+          onClose={() =>
+            setDeleteClueModal({ isOpen: false, clueId: "", clueName: "" })
+          }
+          onConfirm={confirmDeleteClue}
+          title="Deletar Pista"
+          description="Tem certeza que deseja deletar esta pista?"
+          itemName={deleteClueModal.clueName}
+          type="clue"
+        />
+
+        <AddClueModal
+          isOpen={addClueModal}
+          onClose={() => setAddClueModal(false)}
+          onSave={handleSaveClue}
+        />
+      </div>
+    </TooltipProvider>
   );
 });
 

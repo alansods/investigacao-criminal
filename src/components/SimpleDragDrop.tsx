@@ -1,5 +1,11 @@
 import { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MediaIcon } from "./MediaIcon";
 import type { Clue } from "@/types/investigation";
 
@@ -129,49 +135,65 @@ export const SimpleDragDrop = ({
   }
 
   return (
-    <Card
-      ref={cardRef}
-      className={`cursor-move hover:shadow-md transition-shadow ${
-        isDragging ? "opacity-50 shadow-lg" : ""
-      }`}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      <CardContent className="p-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2 flex-1">
-            <MediaIcon type={clue.mediaType} />
-            <div className="flex-1">
-              <h4 className="font-medium text-sm">{clue.title}</h4>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                {clue.content}
-              </p>
+    <TooltipProvider>
+      <Card
+        ref={cardRef}
+        className={`cursor-move hover:shadow-md transition-shadow ${
+          isDragging ? "opacity-50 shadow-lg" : ""
+        }`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <CardContent className="p-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2 flex-1">
+              <MediaIcon type={clue.mediaType} />
+              <div className="flex-1">
+                <h4 className="font-medium text-sm">{clue.title}</h4>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                  {clue.content}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStartEdit(clue.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                  >
+                    ✏️
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Editar pista</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteClue(clue.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-600"
+                  >
+                    🗑️
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Deletar pista</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
-          <div className="flex gap-1">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onStartEdit(clue.id);
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
-            >
-              ✏️
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteClue(clue.id);
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-600"
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
