@@ -2,7 +2,7 @@ import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit3, Trash2, Link, Pencil, GripVertical } from "lucide-react";
+import { Plus, Trash2, Pencil, GripVertical } from "lucide-react";
 import { MediaIcon } from "./MediaIcon";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { AddClueModal } from "./AddClueModal";
@@ -120,7 +120,6 @@ function SortableClue({
 }
 
 const InvestigationNode = memo(({ data, selected }: NodeProps) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [editingClueId, setEditingClueId] = useState<string | null>(null);
   const [addClueModal, setAddClueModal] = useState(false);
   const [deleteGroupModal, setDeleteGroupModal] = useState(false);
@@ -173,10 +172,6 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
     setEditingClueId(null);
   };
 
-  const handleStartConnection = () => {
-    // Aqui você implementaria a lógica para iniciar conexão
-    console.log("Iniciar conexão");
-  };
 
   const handleDeleteGroup = (e: React.MouseEvent) => {
     e.preventDefault();
