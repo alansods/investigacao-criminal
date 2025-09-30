@@ -17,7 +17,7 @@ export default function HelpButton({
       } flex items-center justify-center gap-2 h-10 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors`}
     >
       <HelpCircle className="h-4 w-4" />
-      <span className="text-sm font-medium">Ajuda</span>
+      <span className="text-sm font-medium hidden sm:inline">Ajuda</span>
     </Button>
   );
 }

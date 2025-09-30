@@ -346,6 +346,7 @@ const DroppableReactFlow = memo(
 
 export interface InvestigationCanvasRef {
   saveData: () => void;
+  openHelp: () => void;
 }
 
 const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
@@ -443,6 +444,9 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
     useImperativeHandle(ref, () => ({
       saveData: () => {
         saveToLocalStorage(nodes, edges);
+      },
+      openHelp: () => {
+        setHelpModal(true);
       },
     }));
 
@@ -976,14 +980,14 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         }}
       >
         <div
-          className={`flex h-full min-h-0 touch-none flex-col sm:flex-row ${
+          className={`flex h-full min-h-0 touch-none flex-col lg:flex-row ${
             isDraggingOverCanvas
               ? "bg-blue-50 ring-2 ring-blue-200 ring-opacity-50"
               : ""
           } ${draggedNode || draggedItem ? "dragging" : ""}`}
         >
-          {/* Toolbox - Mobile (top bar) */}
-          <div className="sm:hidden bg-muted/50 p-3 border-b flex flex-row w-full gap-3">
+          {/* Toolbox - Mobile & Tablet (top bar) */}
+          <div className="lg:hidden bg-muted/50 p-3 border-b w-full">
             <Card className="flex-1">
               <CardHeader>
                 <CardTitle className="text-sm">
@@ -994,19 +998,13 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                 </span>
               </CardHeader>
               <CardContent className="mt-4">
-                <ToolboxList
-                  items={investigationTypes}
-                  orientation="horizontal"
-                />
+                <ToolboxList items={investigationTypes} layout="grid" />
               </CardContent>
             </Card>
-            <div className="w-auto">
-              <HelpButton onClick={toggleHelpModal} />
-            </div>
           </div>
 
-          {/* Toolbox - Desktop (left sidebar, original layout) */}
-          <div className="hidden sm:flex w-64 bg-muted/50 p-4 border-r flex-col">
+          {/* Toolbox - Desktop & Notebook (left sidebar) */}
+          <div className="hidden lg:flex w-64 bg-muted/50 p-4 border-r flex-col">
             <Card className="flex-1">
               <CardHeader>
                 <CardTitle className="text-sm">

@@ -3,6 +3,7 @@ import InvestigationCanvas, {
   type InvestigationCanvasRef,
 } from "./components/InvestigationCanvas";
 import { Button } from "@/components/ui/button";
+import HelpButton from "./components/HelpButton";
 import { HatGlasses, Save, Check, Trash2, AlertTriangle } from "lucide-react";
 
 function App() {
@@ -84,6 +85,14 @@ function App() {
                 <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Limpar</span>
               </Button>
+              {/* Help on mobile/tablet (hidden on desktop) */}
+              <div className="lg:hidden">
+                <HelpButton
+                  onClick={() => {
+                    canvasRef.current?.openHelp?.();
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
