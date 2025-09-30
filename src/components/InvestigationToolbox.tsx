@@ -40,7 +40,7 @@ const InvestigationToolbox = ({
       style={style}
       {...listeners}
       {...attributes}
-      className={`cursor-grab active:cursor-grabbing ${
+      className={`cursor-grab active:cursor-grabbing touch-none select-none ${
         isDragging ? "opacity-50" : ""
       }`}
     >

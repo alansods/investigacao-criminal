@@ -60,14 +60,14 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { FileText, Image, History, Volume2, HelpCircle } from "lucide-react";
+import { FileText, Image, History, Volume2 } from "lucide-react";
+import ToolboxList from "./ToolboxList";
+import HelpButton from "./HelpButton";
 import InvestigationNode from "./InvestigationNode";
-import InvestigationToolbox from "./InvestigationToolbox";
 import { DeleteConnectionModal } from "./DeleteConnectionModal";
 import { DuplicateConnectionModal } from "./DuplicateConnectionModal";
 import { HelpModal } from "./HelpModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import type { Clue, MediaType } from "@/types/investigation";
 
 import "@xyflow/react/dist/style.css";
@@ -333,7 +333,11 @@ const DroppableReactFlow = memo(
     });
 
     return (
-      <div ref={setNodeRef} className="flex-1 h-full" onMouseMove={onMouseMove}>
+      <div
+        ref={setNodeRef}
+        className="flex-1 h-full min-w-0"
+        onMouseMove={onMouseMove}
+      >
         {children}
       </div>
     );
@@ -972,14 +976,14 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         }}
       >
         <div
-          className={`flex h-full min-h-0 touch-none ${
+          className={`flex h-full min-h-0 touch-none flex-col sm:flex-row ${
             isDraggingOverCanvas
               ? "bg-blue-50 ring-2 ring-blue-200 ring-opacity-50"
               : ""
           } ${draggedNode || draggedItem ? "dragging" : ""}`}
         >
-          {/* Toolbox */}
-          <div className="w-64 bg-muted/50 p-4 border-r flex flex-col">
+          {/* Toolbox - Mobile (top bar) */}
+          <div className="sm:hidden bg-muted/50 p-3 border-b flex flex-row w-full gap-3">
             <Card className="flex-1">
               <CardHeader>
                 <CardTitle className="text-sm">
@@ -989,217 +993,227 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                   Clique e arraste as categorias para o canvas.
                 </span>
               </CardHeader>
-
-              <CardContent className="space-y-3 mt-4">
-                {investigationTypes.map((nodeType) => (
-                  <InvestigationToolbox
-                    key={nodeType.id}
-                    id={nodeType.id}
-                    type={nodeType.type}
-                    label={nodeType.label}
-                    icon={nodeType.icon}
-                    color={nodeType.color}
-                  />
-                ))}
+              <CardContent className="mt-4">
+                <ToolboxList
+                  items={investigationTypes}
+                  orientation="horizontal"
+                />
               </CardContent>
             </Card>
+            <div className="w-auto">
+              <HelpButton onClick={toggleHelpModal} />
+            </div>
+          </div>
 
-            {/* Botão de Ajuda */}
+          {/* Toolbox - Desktop (left sidebar, original layout) */}
+          <div className="hidden sm:flex w-64 bg-muted/50 p-4 border-r flex-col">
+            <Card className="flex-1">
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  Categorias de Investigação
+                </CardTitle>
+                <span className="text-xs text-muted-foreground">
+                  Clique e arraste as categorias para o canvas.
+                </span>
+              </CardHeader>
+              <CardContent className="mt-4">
+                <ToolboxList
+                  items={investigationTypes}
+                  orientation="vertical"
+                />
+              </CardContent>
+            </Card>
             <div className="mt-4">
-              <Button
-                onClick={toggleHelpModal}
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 h-10 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors"
-              >
-                <HelpCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">Ajuda</span>
-              </Button>
+              <HelpButton onClick={toggleHelpModal} fullWidth />
             </div>
           </div>
 
           {/* Flow Canvas */}
-          <DndContext
-            sensors={useSensors(
-              useSensor(PointerSensor, {
-                activationConstraint: {
-                  distance: 5,
-                  delay: 0,
-                  tolerance: 5,
-                },
-              }),
-              useSensor(TouchSensor, {
-                activationConstraint: {
-                  delay: 200,
-                  tolerance: 8,
-                },
-              })
-            )}
-            collisionDetection={closestCenter}
-            onDragStart={({ active }) => {
-              setDraggedItem(String(active.id));
-              // Adicionar cursor de arrastar ao body durante o drag
-              document.body.style.cursor = "grabbing";
-            }}
-            onDragCancel={() => {
-              setDraggedItem(null);
-              // Restaurar cursor normal em caso de cancelamento
-              document.body.style.cursor = "";
-            }}
-            onDragEnd={({ active, over }) => {
-              setDraggedItem(null);
-              // Restaurar cursor normal
-              document.body.style.cursor = "";
+          <div className="flex-1 min-h-0 min-w-0 relative z-0">
+            <DndContext
+              sensors={useSensors(
+                useSensor(PointerSensor, {
+                  activationConstraint: {
+                    distance: 5,
+                    delay: 0,
+                    tolerance: 5,
+                  },
+                }),
+                useSensor(TouchSensor, {
+                  activationConstraint: {
+                    delay: 200,
+                    tolerance: 8,
+                  },
+                })
+              )}
+              collisionDetection={closestCenter}
+              onDragStart={({ active }) => {
+                setDraggedItem(String(active.id));
+                // Adicionar cursor de arrastar ao body durante o drag
+                document.body.style.cursor = "grabbing";
+              }}
+              onDragCancel={() => {
+                setDraggedItem(null);
+                // Restaurar cursor normal em caso de cancelamento
+                document.body.style.cursor = "";
+              }}
+              onDragEnd={({ active, over }) => {
+                setDraggedItem(null);
+                // Restaurar cursor normal
+                document.body.style.cursor = "";
 
-              if (!over) return;
+                if (!over) return;
 
-              const activeId = String(active.id);
-              const overId = String(over.id);
+                const activeId = String(active.id);
+                const overId = String(over.id);
 
-              // Se está arrastando para o mesmo item, não faz nada
-              if (activeId === overId) return;
+                // Se está arrastando para o mesmo item, não faz nada
+                if (activeId === overId) return;
 
-              // Encontrar os grupos de origem e destino
-              const sourceGroup = nodes.find((node) =>
-                (node.data as { clues?: Clue[] }).clues?.some(
-                  (c) => c.id === activeId
-                )
-              );
+                // Encontrar os grupos de origem e destino
+                const sourceGroup = nodes.find((node) =>
+                  (node.data as { clues?: Clue[] }).clues?.some(
+                    (c) => c.id === activeId
+                  )
+                );
 
-              let targetGroup = nodes.find((node) =>
-                (node.data as { clues?: Clue[] }).clues?.some(
-                  (c) => c.id === overId
-                )
-              );
+                let targetGroup = nodes.find((node) =>
+                  (node.data as { clues?: Clue[] }).clues?.some(
+                    (c) => c.id === overId
+                  )
+                );
 
-              // Se não encontrou o grupo pelo clue, verifica se é uma zona de drop vazia
-              if (!targetGroup && overId.startsWith("empty-")) {
-                const groupId = overId.replace("empty-", "");
-                targetGroup = nodes.find((node) => node.id === groupId);
-              }
+                // Se não encontrou o grupo pelo clue, verifica se é uma zona de drop vazia
+                if (!targetGroup && overId.startsWith("empty-")) {
+                  const groupId = overId.replace("empty-", "");
+                  targetGroup = nodes.find((node) => node.id === groupId);
+                }
 
-              if (sourceGroup && targetGroup) {
-                if (sourceGroup.id !== targetGroup.id) {
-                  // Movimento entre categorias diferentes
-                  handleMoveClue(activeId, sourceGroup.id, targetGroup.id);
-                } else {
-                  // Reordenação dentro da mesma categoria
-                  const currentIds = (
-                    (sourceGroup.data as { clues?: Clue[] }).clues || []
-                  ).map((c) => c.id);
-                  const from = currentIds.indexOf(activeId);
-                  const to = currentIds.indexOf(overId);
+                if (sourceGroup && targetGroup) {
+                  if (sourceGroup.id !== targetGroup.id) {
+                    // Movimento entre categorias diferentes
+                    handleMoveClue(activeId, sourceGroup.id, targetGroup.id);
+                  } else {
+                    // Reordenação dentro da mesma categoria
+                    const currentIds = (
+                      (sourceGroup.data as { clues?: Clue[] }).clues || []
+                    ).map((c) => c.id);
+                    const from = currentIds.indexOf(activeId);
+                    const to = currentIds.indexOf(overId);
 
-                  if (from !== -1 && to !== -1) {
-                    const reordered = [...currentIds];
-                    const [moved] = reordered.splice(from, 1);
-                    reordered.splice(to, 0, moved);
-                    handleReorderClues(sourceGroup.id, reordered);
+                    if (from !== -1 && to !== -1) {
+                      const reordered = [...currentIds];
+                      const [moved] = reordered.splice(from, 1);
+                      reordered.splice(to, 0, moved);
+                      handleReorderClues(sourceGroup.id, reordered);
+                    }
                   }
                 }
-              }
-            }}
-          >
-            <SortableContext
-              items={nodes.flatMap((node) =>
-                ((node.data as { clues?: Clue[] }).clues || []).map(
-                  (clue) => clue.id
-                )
-              )}
-              strategy={verticalListSortingStrategy}
+              }}
             >
-              <DroppableReactFlow onMouseMove={handleMouseMove}>
-                <div ref={reactFlowContainerRef} className="w-full h-full">
-                  <ReactFlow
-                    nodes={memoizedNodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnectStart={onConnectStart}
-                    onConnect={onConnect}
-                    onEdgeClick={onEdgeClick}
-                    onInit={setReactFlowInstance}
-                    nodeTypes={nodeTypes}
-                    fitView={false}
-                    className="bg-background"
-                    // Otimizações de desempenho para muitos elementos
-                    nodesDraggable={true}
-                    nodesConnectable={true}
-                    elementsSelectable={true}
-                    selectNodesOnDrag={false}
-                    // Configurações para melhor performance
-                    minZoom={0.1}
-                    maxZoom={2}
-                    defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                    // Desabilitar algumas features que podem ser caras com muitos nós
-                    attributionPosition="bottom-left"
-                    proOptions={{
-                      hideAttribution: true,
-                    }}
-                    defaultEdgeOptions={{
-                      type: "smoothstep",
-                      style: {
-                        strokeWidth: 2,
-                      },
-                      markerEnd: {
-                        type: "arrowclosed",
-                        width: 20,
-                        height: 20,
-                      },
-                      animated: false, // Desabilitar animação para melhor performance
-                    }}
-                    connectionMode={ConnectionMode.Strict}
-                  >
-                    <Controls />
-                    <MiniMap />
-                    <Background
-                      variant={BackgroundVariant.Dots}
-                      gap={12}
-                      size={1}
-                    />
-                    {isDraggingOverCanvas && dropPosition && (
-                      <div
-                        className="absolute w-4 h-4 bg-blue-500 rounded-full opacity-60 pointer-events-none z-10 animate-pulse"
-                        style={{
-                          left: dropPosition.x - 8,
-                          top: dropPosition.y - 8,
-                          transform: "translate(-50%, -50%)",
-                        }}
+              <SortableContext
+                items={nodes.flatMap((node) =>
+                  ((node.data as { clues?: Clue[] }).clues || []).map(
+                    (clue) => clue.id
+                  )
+                )}
+                strategy={verticalListSortingStrategy}
+              >
+                <DroppableReactFlow onMouseMove={handleMouseMove}>
+                  <div ref={reactFlowContainerRef} className="w-full h-full">
+                    <ReactFlow
+                      nodes={memoizedNodes}
+                      edges={edges}
+                      onNodesChange={onNodesChange}
+                      onEdgesChange={onEdgesChange}
+                      onConnectStart={onConnectStart}
+                      onConnect={onConnect}
+                      onEdgeClick={onEdgeClick}
+                      onInit={setReactFlowInstance}
+                      nodeTypes={nodeTypes}
+                      fitView={false}
+                      className="bg-background"
+                      // Otimizações de desempenho para muitos elementos
+                      nodesDraggable={true}
+                      nodesConnectable={true}
+                      elementsSelectable={true}
+                      selectNodesOnDrag={false}
+                      // Configurações para melhor performance
+                      minZoom={0.1}
+                      maxZoom={2}
+                      defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                      // Desabilitar algumas features que podem ser caras com muitos nós
+                      attributionPosition="bottom-left"
+                      proOptions={{
+                        hideAttribution: true,
+                      }}
+                      defaultEdgeOptions={{
+                        type: "smoothstep",
+                        style: {
+                          strokeWidth: 2,
+                        },
+                        markerEnd: {
+                          type: "arrowclosed",
+                          width: 20,
+                          height: 20,
+                        },
+                        animated: false, // Desabilitar animação para melhor performance
+                      }}
+                      connectionMode={ConnectionMode.Strict}
+                    >
+                      <Controls />
+                      <MiniMap />
+                      <Background
+                        variant={BackgroundVariant.Dots}
+                        gap={12}
+                        size={1}
                       />
-                    )}
-                  </ReactFlow>
-                </div>
-              </DroppableReactFlow>
-            </SortableContext>
+                      {isDraggingOverCanvas && dropPosition && (
+                        <div
+                          className="absolute w-4 h-4 bg-blue-500 rounded-full opacity-60 pointer-events-none z-10 animate-pulse"
+                          style={{
+                            left: dropPosition.x - 8,
+                            top: dropPosition.y - 8,
+                            transform: "translate(-50%, -50%)",
+                          }}
+                        />
+                      )}
+                    </ReactFlow>
+                  </div>
+                </DroppableReactFlow>
+              </SortableContext>
 
-            <DragOverlay>
-              {draggedItem
-                ? (() => {
-                    // Encontrar a pista sendo arrastada
-                    const draggedClue = nodes
-                      .flatMap(
-                        (node) => (node.data as { clues?: Clue[] }).clues || []
-                      )
-                      .find((clue) => clue.id === draggedItem);
+              <DragOverlay>
+                {draggedItem
+                  ? (() => {
+                      // Encontrar a pista sendo arrastada
+                      const draggedClue = nodes
+                        .flatMap(
+                          (node) =>
+                            (node.data as { clues?: Clue[] }).clues || []
+                        )
+                        .find((clue) => clue.id === draggedItem);
 
-                    return (
-                      <div className="bg-white border-2 border-blue-500 rounded-lg shadow-xl p-3 opacity-95 min-w-[200px]">
-                        <div className="flex items-start gap-2">
-                          <div className="w-4 h-4 bg-blue-500 rounded mt-0.5"></div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm text-gray-800">
-                              {draggedClue?.title || "Pista"}
-                            </h4>
-                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                              {draggedClue?.content || "Movendo pista..."}
-                            </p>
+                      return (
+                        <div className="bg-white border-2 border-blue-500 rounded-lg shadow-xl p-3 opacity-95 min-w-[200px]">
+                          <div className="flex items-start gap-2">
+                            <div className="w-4 h-4 bg-blue-500 rounded mt-0.5"></div>
+                            <div className="flex-1">
+                              <h4 className="font-medium text-sm text-gray-800">
+                                {draggedClue?.title || "Pista"}
+                              </h4>
+                              <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                {draggedClue?.content || "Movendo pista..."}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })()
-                : null}
-            </DragOverlay>
-          </DndContext>
+                      );
+                    })()
+                  : null}
+              </DragOverlay>
+            </DndContext>
+          </div>
         </div>
 
         {/* Delete Connection Modal */}
