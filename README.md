@@ -29,6 +29,8 @@ Acesse o link acima para testar todas as funcionalidades do sistema em tempo rea
   - 👤 Suspeitos (amarelo)
   - 🎬 Cronologia (verde)
 - **Posicionamento Livre**: Organize as categorias visualmente no canvas
+- **Edição Inline de Descrição**: Clique no ícone de lápis para editar a descrição da categoria
+- **Validação Inteligente**: Não permite salvar descrições vazias
 
 ### 🔍 Sistema de Pistas
 - **Adicionar Pistas**: Cada categoria pode conter múltiplas pistas
@@ -127,6 +129,8 @@ src/
 - Clique e arraste uma categoria da barra lateral esquerda para o canvas
 - Solte na posição desejada
 - Você pode adicionar quantas categorias quiser
+- **Editar Descrição**: Clique no ícone de lápis ao lado da descrição para personalizar
+- **Salvar Descrição**: Digite sua descrição e clique em "Salvar" (botão fica desabilitado se vazio)
 
 ### 2. Adicionar Pistas
 - Clique no botão "+" dentro de uma categoria
@@ -238,6 +242,7 @@ O projeto está configurado com:
 - [ ] Tags e categorização adicional
 - [ ] Anexos de arquivos reais
 - [x] Tooltips informativos nos botões
+- [x] Edição inline de descrição das categorias
 
 ## 🤝 Contribuição
 

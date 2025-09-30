@@ -64,6 +64,7 @@ export interface InvestigationNodeData {
       mediaUrl?: string;
     }
   ) => void;
+  onUpdateDescription?: (groupId: string, description: string) => void;
   groupId?: string;
   draggedItem?: string | null;
 }
@@ -163,6 +164,8 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
     mediaType: MediaType;
     mediaUrl?: string;
   } | null>(null);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [draftDescription, setDraftDescription] = useState("");
   const [addClueModal, setAddClueModal] = useState(false);
   const [deleteGroupModal, setDeleteGroupModal] = useState(false);
   const [deleteClueModal, setDeleteClueModal] = useState<{
@@ -267,6 +270,29 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
     setDraftClue(null);
   };
 
+  const handleStartEditDescription = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingDescription(true);
+    setDraftDescription(nodeData.description || "");
+  };
+
+  const handleCancelEditDescription = () => {
+    setEditingDescription(false);
+    setDraftDescription("");
+  };
+
+  const handleSaveEditDescription = () => {
+    // Validação: não permitir salvar sem texto
+    if (!draftDescription.trim()) return;
+
+    if (nodeData.onUpdateDescription && nodeData.groupId) {
+      nodeData.onUpdateDescription(nodeData.groupId, draftDescription);
+    }
+    setEditingDescription(false);
+    setDraftDescription("");
+  };
+
   return (
     <TooltipProvider>
       <div className="relative">
@@ -321,10 +347,58 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
                 </Tooltip>
               </div>
             </div>
-            {nodeData.description && (
-              <p className="text-xs text-muted-foreground">
-                {nodeData.description}
-              </p>
+            {editingDescription ? (
+              <div className="space-y-2">
+                <textarea
+                  value={draftDescription}
+                  onChange={(e) => setDraftDescription(e.target.value)}
+                  className="w-full px-2 py-1 border rounded text-xs min-h-[60px] resize-none"
+                  placeholder="Descrição da categoria"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={handleCancelEditDescription}
+                    className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveEditDescription}
+                    disabled={!draftDescription.trim()}
+                    className={`px-2 py-1 text-xs rounded ${
+                      draftDescription.trim()
+                        ? "bg-blue-500 text-white hover:bg-blue-600"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                {nodeData.description && (
+                  <p className="text-xs text-muted-foreground flex-1">
+                    {nodeData.description}
+                  </p>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleStartEditDescription}
+                      className="h-5 w-5 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Editar descrição</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             )}
           </CardHeader>
 

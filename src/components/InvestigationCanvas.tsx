@@ -754,6 +754,25 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
       [setNodes]
     );
 
+    const handleUpdateDescription = useCallback(
+      (groupId: string, description: string) => {
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === groupId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    description,
+                  },
+                }
+              : node
+          )
+        );
+      },
+      [setNodes]
+    );
+
     const handleMouseMoveBase = useCallback(
       (e: React.MouseEvent) => {
         // Guardar coordenadas absolutas de tela; screenToFlowPosition espera coords relativas à janela
@@ -872,7 +891,7 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         position,
         data: {
           label: active.data.current.label,
-          description: `Nova categoria de ${active.data.current.label.toLowerCase()}`,
+          description: "Escreva uma descrição para esta categoria.",
           color: active.data.current.color,
           icon: active.data.current.icon,
           clues: [],
@@ -900,6 +919,7 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
             onDeleteClue: handleDeleteClue,
             onAddClue: handleAddClue,
             onUpdateClue: handleUpdateClue,
+            onUpdateDescription: handleUpdateDescription,
             onReorderClues: handleReorderClues,
             onMoveClue: handleMoveClue,
             groupId: node.id,
@@ -912,6 +932,7 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         handleDeleteClue,
         handleAddClue,
         handleUpdateClue,
+        handleUpdateDescription,
         handleReorderClues,
         handleMoveClue,
         draggedItem,
