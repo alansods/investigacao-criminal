@@ -277,7 +277,7 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
           md:min-w-[320px] md:max-w-[380px]
           lg:min-w-[340px] lg:max-w-[400px]
           xl:min-w-[360px] xl:max-w-[420px]
-          transition-all ${selected ? "ring-2 ring-blue-500" : ""} ${
+          transition-all ${selected ? "ring-2 ring-white" : ""} ${
             isDragSource ? "ring-2 ring-orange-500 bg-orange-50" : ""
           } ${
             isDropTarget ? "ring-2 ring-green-500 bg-green-50 cursor-copy" : ""

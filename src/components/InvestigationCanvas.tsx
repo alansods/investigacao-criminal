@@ -2,10 +2,31 @@ import {
   useState,
   useCallback,
   useRef,
-  useEffect,
   useImperativeHandle,
   forwardRef,
+  useMemo,
+  memo,
 } from "react";
+
+// Hook personalizado para debouncing
+function useDebounce<T extends (...args: never[]) => void>(
+  callback: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
+
+  return useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => callback(...args), delay);
+    },
+    [callback, delay]
+  );
+}
 import {
   ReactFlow,
   MiniMap,
@@ -267,8 +288,8 @@ function makeInitialEdge(
   targetHandle?: string
 ): Edge {
   const targetNode = initialNodes.find((n) => n.id === target);
-  const targetLabel = (targetNode?.data as any)?.label as string | undefined;
-  const targetBg = (targetNode?.data as any)?.color as string | undefined;
+  const targetLabel = (targetNode?.data as { label?: string })?.label;
+  const targetBg = (targetNode?.data as { color?: string })?.color;
   const stroke = mapTailwindBgToStrokeHex(targetBg);
   return {
     id: `e-${source}-${target}`,
@@ -296,55 +317,28 @@ const initialEdges: Edge[] = [
   makeInitialEdge("group-2", "group-3", "right", "left-target"),
 ];
 
-const investigationTypes = [
-  {
-    id: "evidence",
-    type: "investigation",
-    label: "Evidências",
-    icon: <FileText className="w-4 h-4 text-red-600" />,
-    color: "bg-red-100",
-  },
-  {
-    id: "testimony",
-    type: "investigation",
-    label: "Depoimentos",
-    icon: <Volume2 className="w-4 h-4 text-blue-600" />,
-    color: "bg-blue-100",
-  },
-  {
-    id: "suspects",
-    type: "investigation",
-    label: "Suspeitos",
-    icon: <Image className="w-4 h-4 text-yellow-600" />,
-    color: "bg-yellow-100",
-  },
-  {
-    id: "timeline",
-    type: "investigation",
-    label: "Cronologia",
-    icon: <Video className="w-4 h-4 text-green-600" />,
-    color: "bg-green-100",
-  },
-];
+// Dados dos tipos de investigação (serão memoizados dentro do componente)
 
-// Componente wrapper para capturar eventos de mouse
-const DroppableReactFlow = ({
-  children,
-  onMouseMove,
-}: {
-  children: React.ReactNode;
-  onMouseMove: (e: React.MouseEvent) => void;
-}) => {
-  const { setNodeRef } = useDroppable({
-    id: "reactflow-canvas",
-  });
+// Componente wrapper para capturar eventos de mouse - memoizado para evitar re-renders
+const DroppableReactFlow = memo(
+  ({
+    children,
+    onMouseMove,
+  }: {
+    children: React.ReactNode;
+    onMouseMove: (e: React.MouseEvent) => void;
+  }) => {
+    const { setNodeRef } = useDroppable({
+      id: "reactflow-canvas",
+    });
 
-  return (
-    <div ref={setNodeRef} className="flex-1 h-full" onMouseMove={onMouseMove}>
-      {children}
-    </div>
-  );
-};
+    return (
+      <div ref={setNodeRef} className="flex-1 h-full" onMouseMove={onMouseMove}>
+        {children}
+      </div>
+    );
+  }
+);
 
 export interface InvestigationCanvasRef {
   saveData: () => void;
@@ -394,11 +388,47 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
     });
     const [helpModal, setHelpModal] = useState(false);
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+    // Memoizar tipos de investigação dentro do componente
+    const investigationTypes = useMemo(
+      () => [
+        {
+          id: "evidence",
+          type: "investigation",
+          label: "Evidências",
+          icon: <FileText className="w-4 h-4 text-red-600" />,
+          color: "bg-red-100",
+        },
+        {
+          id: "testimony",
+          type: "investigation",
+          label: "Depoimentos",
+          icon: <Volume2 className="w-4 h-4 text-blue-600" />,
+          color: "bg-blue-100",
+        },
+        {
+          id: "suspects",
+          type: "investigation",
+          label: "Suspeitos",
+          icon: <Image className="w-4 h-4 text-yellow-600" />,
+          color: "bg-yellow-100",
+        },
+        {
+          id: "timeline",
+          type: "investigation",
+          label: "Cronologia",
+          icon: <Video className="w-4 h-4 text-green-600" />,
+          color: "bg-green-100",
+        },
+      ],
+      []
+    );
     const [pointerPos, setPointerPos] = useState<{
       x: number;
       y: number;
     } | null>(null);
-    const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const reactFlowContainerRef = useRef<HTMLDivElement>(null);
     const [isDraggingOverCanvas, setIsDraggingOverCanvas] = useState(false);
     const [dropPosition, setDropPosition] = useState<{
       x: number;
@@ -412,21 +442,7 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
       },
     }));
 
-    // Ajustar visualização inicial após carregamento
-    useEffect(() => {
-      if (reactFlowInstance) {
-        // Aguardar um pouco para garantir que os nós foram renderizados
-        setTimeout(() => {
-          reactFlowInstance.fitView({
-            padding: 0.2,
-            includeHiddenNodes: false,
-            minZoom: 0.5,
-            maxZoom: 1.2,
-          });
-        }, 100);
-      }
-    }, [reactFlowInstance]);
-
+    // Ajustar visualização inicial após carregamento - otimizado
     const onConnect = useCallback(
       (params: Connection) => {
         // Se a conexão começou em um handle de target, invertemos a direção
@@ -450,8 +466,10 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
           // Encontrar os nomes dos nodes para exibir no modal
           const sourceNode = nodes.find((n) => n.id === sourceId);
           const targetNode = nodes.find((n) => n.id === targetId);
-          const sourceLabel = (sourceNode?.data as any)?.label || "Card A";
-          const targetLabel = (targetNode?.data as any)?.label || "Card B";
+          const sourceLabel =
+            (sourceNode?.data as { label?: string })?.label || "Card A";
+          const targetLabel =
+            (targetNode?.data as { label?: string })?.label || "Card B";
 
           // Mostrar modal de aviso
           setDuplicateModal({
@@ -474,12 +492,8 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
             : params.targetHandle;
 
           const targetNode = nodes.find((n) => n.id === targetId);
-          const targetLabel = (targetNode?.data as any)?.label as
-            | string
-            | undefined;
-          const targetBg = (targetNode?.data as any)?.color as
-            | string
-            | undefined;
+          const targetLabel = (targetNode?.data as { label?: string })?.label;
+          const targetBg = (targetNode?.data as { color?: string })?.color;
           const stroke = mapTailwindBgToStrokeHex(targetBg);
 
           const newEdge: Edge = {
@@ -565,16 +579,24 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
     const handleDeleteClue = useCallback(
       (clueId: string) => {
         setNodes((nds) =>
-          nds.map((node) => ({
-            ...node,
-            data: {
-              ...node.data,
-              clues:
-                (node.data.clues as any[])?.filter(
-                  (clue: any) => clue.id !== clueId
-                ) || [],
-            },
-          }))
+          nds.map((node) => {
+            const currentClues = (node.data.clues as Clue[]) || [];
+            const filteredClues = currentClues.filter(
+              (clue) => clue.id !== clueId
+            );
+
+            // Só atualizar se houver mudança
+            if (filteredClues.length !== currentClues.length) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  clues: filteredClues,
+                },
+              };
+            }
+            return node;
+          })
         );
       },
       [setNodes]
@@ -585,7 +607,16 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         setNodes((nds) =>
           nds.map((node) => {
             if (node.id !== groupId) return node;
-            const current = ((node.data as any).clues || []) as Clue[];
+
+            const current = ((node.data as { clues?: Clue[] }).clues ||
+              []) as Clue[];
+            const currentIds = current.map((c) => c.id);
+
+            // Só reordenar se a ordem mudou
+            if (JSON.stringify(currentIds) === JSON.stringify(orderedIds)) {
+              return node;
+            }
+
             const byId = new Map(current.map((c) => [c.id, c] as const));
             const reordered = orderedIds
               .map((id, idx) => {
@@ -594,9 +625,10 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                 return { ...c, order: idx } as Clue;
               })
               .filter(Boolean) as Clue[];
+
             return {
               ...node,
-              data: { ...(node.data as any), clues: reordered },
+              data: { ...node.data, clues: reordered },
             };
           })
         );
@@ -607,11 +639,13 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
     const handleMoveClue = useCallback(
       (clueId: string, fromGroupId: string, toGroupId: string) => {
         setNodes((nds) => {
+          if (fromGroupId === toGroupId) return nds; // Não mover para o mesmo grupo
+
           // Encontrar a pista no grupo de origem
           let clueToMove: Clue | null = null;
           const updatedNodes = nds.map((node) => {
             if (node.id === fromGroupId) {
-              const clues = (node.data as any).clues || [];
+              const clues = (node.data as { clues?: Clue[] }).clues || [];
               const clueIndex = clues.findIndex((c: Clue) => c.id === clueId);
               if (clueIndex !== -1) {
                 clueToMove = clues[clueIndex];
@@ -627,11 +661,11 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
             return node;
           });
 
-          // Adicionar a pista ao grupo de destino
+          // Adicionar a pista ao grupo de destino apenas se encontrou a pista
           if (clueToMove) {
             return updatedNodes.map((node) => {
               if (node.id === toGroupId) {
-                const clues = (node.data as any).clues || [];
+                const clues = (node.data as { clues?: Clue[] }).clues || [];
                 return {
                   ...node,
                   data: {
@@ -665,19 +699,17 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         };
 
         setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id === groupId) {
-              const currentClues = (node.data.clues as any[]) || [];
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  clues: [...currentClues, newClue],
-                },
-              };
-            }
-            return node;
-          })
+          nds.map((node) =>
+            node.id === groupId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    clues: [...((node.data.clues as Clue[]) || []), newClue],
+                  },
+                }
+              : node
+          )
         );
       },
       [setNodes]
@@ -695,44 +727,48 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         }
       ) => {
         setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id !== groupId) return node;
-            const clues = ((node.data as any).clues || []) as Clue[];
-            const updatedClues = clues.map((c) =>
-              c.id === clueId
-                ? {
-                    ...c,
-                    title: updates.title,
-                    content: updates.content,
-                    mediaType: updates.mediaType,
-                    mediaUrl: updates.mediaUrl,
-                    updatedAt: new Date(),
-                  }
-                : c
-            );
-            return {
-              ...node,
-              data: { ...(node.data as any), clues: updatedClues },
-            };
-          })
+          nds.map((node) =>
+            node.id === groupId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    clues: ((node.data.clues as Clue[]) || []).map((c) =>
+                      c.id === clueId
+                        ? {
+                            ...c,
+                            title: updates.title,
+                            content: updates.content,
+                            mediaType: updates.mediaType,
+                            mediaUrl: updates.mediaUrl,
+                            updatedAt: new Date(),
+                          }
+                        : c
+                    ),
+                  },
+                }
+              : node
+          )
         );
       },
       [setNodes]
     );
 
-    const handleMouseMove = useCallback(
+    const handleMouseMoveBase = useCallback(
       (e: React.MouseEvent) => {
         // Guardar coordenadas absolutas de tela; screenToFlowPosition espera coords relativas à janela
         setMousePosition({ x: e.clientX, y: e.clientY });
 
         // Verificar se o mouse está sobre o canvas durante o arrastar
-        if (draggedNode && reactFlowWrapper.current) {
-          const rect = reactFlowWrapper.current.getBoundingClientRect();
+        if (draggedNode && reactFlowContainerRef.current) {
+          const rect = reactFlowContainerRef.current.getBoundingClientRect();
           const isOver =
             e.clientX >= rect.left &&
             e.clientX <= rect.right &&
             e.clientY >= rect.top &&
             e.clientY <= rect.bottom;
+
+          // Atualizar o estado visual imediatamente para melhor responsividade
           setIsDraggingOverCanvas(isOver);
 
           if (isOver && reactFlowInstance) {
@@ -748,6 +784,9 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
       },
       [draggedNode, reactFlowInstance]
     );
+
+    // Aplicar debouncing para reduzir cálculos desnecessários durante movimento rápido
+    const handleMouseMove = useDebounce(handleMouseMoveBase, 16); // ~60fps
 
     const onDragStart = (event: DragStartEvent) => {
       if (event.active.data.current) {
@@ -771,7 +810,9 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
       };
       window.addEventListener("pointermove", handlePointerMove);
       // Store remover on window for cleanup on drop
-      (window as any)._rf_handlePointerMove = handlePointerMove;
+      (
+        window as Window & { _rf_handlePointerMove?: (e: PointerEvent) => void }
+      )._rf_handlePointerMove = handlePointerMove;
       // Ensure grabbing cursor while dragging from toolbox
       document.body.style.cursor = "grabbing";
     };
@@ -779,6 +820,20 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
     const onDragEnd = (event: DragEndEvent) => {
       const { active } = event;
       setDraggedNode(null);
+      setIsDraggingOverCanvas(false); // Reset do estado visual do canvas
+
+      // Cleanup pointer listener
+      const windowWithHandler = window as Window & {
+        _rf_handlePointerMove?: (e: PointerEvent) => void;
+      };
+      const stored = windowWithHandler._rf_handlePointerMove;
+      if (stored) {
+        window.removeEventListener("pointermove", stored);
+        windowWithHandler._rf_handlePointerMove = undefined;
+      }
+      setPointerPos(null);
+      // Restore cursor
+      document.body.style.cursor = "";
 
       // Se não há active.data.current, não é um item do toolbox
       if (!active.data.current) return;
@@ -786,27 +841,30 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
       // Se não há reactFlowInstance, não podemos calcular a posição
       if (!reactFlowInstance) return;
 
-      const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+      // Usar a ref do container do ReactFlow para verificar bounds
+      const bounds = reactFlowContainerRef.current?.getBoundingClientRect();
       if (!bounds) return;
+
       const clientX = pointerPos?.x ?? mousePosition.x;
       const clientY = pointerPos?.y ?? mousePosition.y;
+
+      // Verificar se o drop está dentro da área do canvas (ReactFlow)
+      const isInsideCanvas =
+        clientX >= bounds.left &&
+        clientX <= bounds.right &&
+        clientY >= bounds.top &&
+        clientY <= bounds.bottom;
+
+      // Se não está dentro do canvas, não criar categoria
+      if (!isInsideCanvas) {
+        return;
+      }
+
       // Converter coordenadas de tela -> posição no flow
       const position = reactFlowInstance.screenToFlowPosition({
         x: clientX - bounds.left,
         y: clientY - bounds.top,
       });
-
-      // Cleanup pointer listener
-      const stored = (window as any)._rf_handlePointerMove as (
-        e: PointerEvent
-      ) => void;
-      if (stored) {
-        window.removeEventListener("pointermove", stored);
-        (window as any)._rf_handlePointerMove = null;
-      }
-      setPointerPos(null);
-      // Restore cursor
-      document.body.style.cursor = "";
 
       const newNode: Node = {
         id: `group-${Date.now()}`,
@@ -821,8 +879,44 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         },
       };
 
+      // Evitar múltiplas operações simultâneas
+      if (isProcessing) return;
+
+      setIsProcessing(true);
       setNodes((nds) => [...nds, newNode]);
+
+      // Reset do estado de processamento após um breve delay
+      setTimeout(() => setIsProcessing(false), 50);
     };
+
+    // Memoizar os nós com seus dados para evitar re-renders desnecessários
+    const memoizedNodes = useMemo(
+      () =>
+        nodes.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            onDeleteGroup: handleDeleteGroup,
+            onDeleteClue: handleDeleteClue,
+            onAddClue: handleAddClue,
+            onUpdateClue: handleUpdateClue,
+            onReorderClues: handleReorderClues,
+            onMoveClue: handleMoveClue,
+            groupId: node.id,
+            draggedItem: draggedItem,
+          },
+        })),
+      [
+        nodes,
+        handleDeleteGroup,
+        handleDeleteClue,
+        handleAddClue,
+        handleUpdateClue,
+        handleReorderClues,
+        handleMoveClue,
+        draggedItem,
+      ]
+    );
 
     return (
       <DndContext
@@ -843,12 +937,14 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         onDragEnd={onDragEnd}
         onDragCancel={() => {
           setDraggedNode(null);
-          const stored = (window as any)._rf_handlePointerMove as
-            | ((e: PointerEvent) => void)
-            | null;
+          setIsDraggingOverCanvas(false); // Reset do estado visual do canvas
+          const windowWithHandler = window as Window & {
+            _rf_handlePointerMove?: (e: PointerEvent) => void;
+          };
+          const stored = windowWithHandler._rf_handlePointerMove;
           if (stored) {
             window.removeEventListener("pointermove", stored);
-            (window as any)._rf_handlePointerMove = null;
+            windowWithHandler._rf_handlePointerMove = undefined;
           }
           setPointerPos(null);
           document.body.style.cursor = "";
@@ -943,11 +1039,15 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
 
               // Encontrar os grupos de origem e destino
               const sourceGroup = nodes.find((node) =>
-                (node.data as any).clues?.some((c: any) => c.id === activeId)
+                (node.data as { clues?: Clue[] }).clues?.some(
+                  (c) => c.id === activeId
+                )
               );
 
               let targetGroup = nodes.find((node) =>
-                (node.data as any).clues?.some((c: any) => c.id === overId)
+                (node.data as { clues?: Clue[] }).clues?.some(
+                  (c) => c.id === overId
+                )
               );
 
               // Se não encontrou o grupo pelo clue, verifica se é uma zona de drop vazia
@@ -963,8 +1063,8 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                 } else {
                   // Reordenação dentro da mesma categoria
                   const currentIds = (
-                    (sourceGroup.data as any).clues || []
-                  ).map((c: any) => c.id);
+                    (sourceGroup.data as { clues?: Clue[] }).clues || []
+                  ).map((c) => c.id);
                   const from = currentIds.indexOf(activeId);
                   const to = currentIds.indexOf(overId);
 
@@ -980,27 +1080,16 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
           >
             <SortableContext
               items={nodes.flatMap((node) =>
-                ((node.data as any).clues || []).map((clue: any) => clue.id)
+                ((node.data as { clues?: Clue[] }).clues || []).map(
+                  (clue) => clue.id
+                )
               )}
               strategy={verticalListSortingStrategy}
             >
               <DroppableReactFlow onMouseMove={handleMouseMove}>
-                <div ref={reactFlowWrapper} className="w-full h-full min-h-0">
+                <div ref={reactFlowContainerRef} className="w-full h-full">
                   <ReactFlow
-                    nodes={nodes.map((node) => ({
-                      ...node,
-                      data: {
-                        ...node.data,
-                        onDeleteGroup: handleDeleteGroup,
-                        onDeleteClue: handleDeleteClue,
-                        onAddClue: handleAddClue,
-                        onUpdateClue: handleUpdateClue,
-                        onReorderClues: handleReorderClues,
-                        onMoveClue: handleMoveClue,
-                        groupId: node.id,
-                        draggedItem: draggedItem,
-                      },
-                    }))}
+                    nodes={memoizedNodes}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
@@ -1011,6 +1100,20 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                     nodeTypes={nodeTypes}
                     fitView={false}
                     className="bg-background"
+                    // Otimizações de desempenho para muitos elementos
+                    nodesDraggable={true}
+                    nodesConnectable={true}
+                    elementsSelectable={true}
+                    selectNodesOnDrag={false}
+                    // Configurações para melhor performance
+                    minZoom={0.1}
+                    maxZoom={2}
+                    defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                    // Desabilitar algumas features que podem ser caras com muitos nós
+                    attributionPosition="bottom-left"
+                    proOptions={{
+                      hideAttribution: true,
+                    }}
                     defaultEdgeOptions={{
                       type: "smoothstep",
                       style: {
@@ -1021,6 +1124,7 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                         width: 20,
                         height: 20,
                       },
+                      animated: false, // Desabilitar animação para melhor performance
                     }}
                     connectionMode={ConnectionMode.Strict}
                   >
@@ -1051,8 +1155,10 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                 ? (() => {
                     // Encontrar a pista sendo arrastada
                     const draggedClue = nodes
-                      .flatMap((node) => (node.data as any).clues || [])
-                      .find((clue: any) => clue.id === draggedItem);
+                      .flatMap(
+                        (node) => (node.data as { clues?: Clue[] }).clues || []
+                      )
+                      .find((clue) => clue.id === draggedItem);
 
                     return (
                       <div className="bg-white border-2 border-blue-500 rounded-lg shadow-xl p-3 opacity-95 min-w-[200px]">
@@ -1098,7 +1204,19 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
 
         <DragOverlay>
           {draggedNode ? (
-            <div className="bg-white border-2 border-blue-500 rounded-lg shadow-2xl p-4 opacity-95 min-w-[220px] transform rotate-3">
+            <div
+              className={`bg-white border-2 rounded-lg shadow-2xl p-4 opacity-95 min-w-[220px] transform rotate-3 ${
+                draggedNode.color.includes("red")
+                  ? "border-red-500"
+                  : draggedNode.color.includes("blue")
+                  ? "border-blue-500"
+                  : draggedNode.color.includes("yellow")
+                  ? "border-yellow-500"
+                  : draggedNode.color.includes("green")
+                  ? "border-green-500"
+                  : "border-gray-500"
+              }`}
+            >
               <Card className="w-full h-20 shadow-lg">
                 <CardContent className="p-3 flex flex-col items-center justify-center h-full">
                   <div
@@ -1111,7 +1229,19 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                   </span>
                 </CardContent>
               </Card>
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-500"></div>
+              <div
+                className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+                  draggedNode.color.includes("red")
+                    ? "border-t-red-500"
+                    : draggedNode.color.includes("blue")
+                    ? "border-t-blue-500"
+                    : draggedNode.color.includes("yellow")
+                    ? "border-t-yellow-500"
+                    : draggedNode.color.includes("green")
+                    ? "border-t-green-500"
+                    : "border-t-gray-500"
+                }`}
+              ></div>
             </div>
           ) : null}
         </DragOverlay>
