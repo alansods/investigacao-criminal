@@ -55,6 +55,7 @@ import {
   PointerSensor,
   TouchSensor,
   closestCenter,
+  type Modifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -76,6 +77,23 @@ const STORAGE_KEY = "investigation-workflow-data";
 
 const nodeTypes = {
   investigation: InvestigationNode,
+};
+
+// Modifier customizado para ocultar DragOverlay no mobile/tablet
+const customModifier: Modifier = ({ transform, draggingNodeRect }) => {
+  // Detectar se é touch device
+  const isTouchDevice = "ontouchstart" in window;
+
+  if (isTouchDevice && draggingNodeRect) {
+    // Para touch devices, ocultar o feedback visual
+    return {
+      ...transform,
+      x: -9999,
+      y: -9999,
+    };
+  }
+
+  return transform;
 };
 
 // Função para obter ícone baseado no tipo de categoria
@@ -324,9 +342,11 @@ const DroppableReactFlow = memo(
   ({
     children,
     onMouseMove,
+    onPointerMove,
   }: {
     children: React.ReactNode;
-    onMouseMove: (e: React.MouseEvent) => void;
+    onMouseMove?: (e: React.MouseEvent) => void;
+    onPointerMove?: (e: React.PointerEvent) => void;
   }) => {
     const { setNodeRef } = useDroppable({
       id: "reactflow-canvas",
@@ -337,6 +357,7 @@ const DroppableReactFlow = memo(
         ref={setNodeRef}
         className="flex-1 h-full min-w-0"
         onMouseMove={onMouseMove}
+        onPointerMove={onPointerMove}
       >
         {children}
       </div>
@@ -435,10 +456,6 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
     const [isProcessing, setIsProcessing] = useState(false);
     const reactFlowContainerRef = useRef<HTMLDivElement>(null);
     const [isDraggingOverCanvas, setIsDraggingOverCanvas] = useState(false);
-    const [dropPosition, setDropPosition] = useState<{
-      x: number;
-      y: number;
-    } | null>(null);
 
     // Expor função de salvar para o componente pai
     useImperativeHandle(ref, () => ({
@@ -781,12 +798,12 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
       [setNodes]
     );
 
-    const handleMouseMoveBase = useCallback(
-      (e: React.MouseEvent) => {
-        // Guardar coordenadas absolutas de tela; screenToFlowPosition espera coords relativas à janela
+    type ClientXYEvent = { clientX: number; clientY: number };
+
+    const handleMoveBase = useCallback(
+      (e: ClientXYEvent) => {
         setMousePosition({ x: e.clientX, y: e.clientY });
 
-        // Verificar se o mouse está sobre o canvas durante o arrastar
         if (draggedNode && reactFlowContainerRef.current) {
           const rect = reactFlowContainerRef.current.getBoundingClientRect();
           const isOver =
@@ -795,25 +812,21 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
             e.clientY >= rect.top &&
             e.clientY <= rect.bottom;
 
-          // Atualizar o estado visual imediatamente para melhor responsividade
           setIsDraggingOverCanvas(isOver);
-
-          if (isOver && reactFlowInstance) {
-            const position = reactFlowInstance.screenToFlowPosition({
-              x: e.clientX - rect.left,
-              y: e.clientY - rect.top,
-            });
-            setDropPosition(position);
-          } else {
-            setDropPosition(null);
-          }
         }
       },
       [draggedNode, reactFlowInstance]
     );
 
-    // Aplicar debouncing para reduzir cálculos desnecessários durante movimento rápido
-    const handleMouseMove = useDebounce(handleMouseMoveBase, 16); // ~60fps
+    // Debounced handlers for mouse and pointer move
+    const handleMouseMove = useDebounce(
+      (e: React.MouseEvent) => handleMoveBase(e),
+      16
+    );
+    const handlePointerMove = useDebounce(
+      (e: React.PointerEvent) => handleMoveBase(e),
+      16
+    );
 
     const onDragStart = (event: DragStartEvent) => {
       if (event.active.data.current) {
@@ -957,8 +970,8 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
           }),
           useSensor(TouchSensor, {
             activationConstraint: {
-              delay: 250,
-              tolerance: 5,
+              delay: 150,
+              tolerance: 8,
             },
           })
         )}
@@ -1117,7 +1130,10 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                 )}
                 strategy={verticalListSortingStrategy}
               >
-                <DroppableReactFlow onMouseMove={handleMouseMove}>
+                <DroppableReactFlow
+                  onMouseMove={handleMouseMove}
+                  onPointerMove={handlePointerMove}
+                >
                   <div ref={reactFlowContainerRef} className="w-full h-full">
                     <ReactFlow
                       nodes={memoizedNodes}
@@ -1166,16 +1182,6 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                         gap={12}
                         size={1}
                       />
-                      {isDraggingOverCanvas && dropPosition && (
-                        <div
-                          className="absolute w-4 h-4 bg-blue-500 rounded-full opacity-60 pointer-events-none z-10 animate-pulse"
-                          style={{
-                            left: dropPosition.x - 8,
-                            top: dropPosition.y - 8,
-                            transform: "translate(-50%, -50%)",
-                          }}
-                        />
-                      )}
                     </ReactFlow>
                   </div>
                 </DroppableReactFlow>
@@ -1235,10 +1241,10 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
         {/* Help Modal */}
         <HelpModal isOpen={helpModal} onClose={toggleHelpModal} />
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={null} modifiers={[customModifier]}>
           {draggedNode ? (
             <div
-              className={`bg-white border-2 rounded-lg shadow-2xl p-4 opacity-95 min-w-[220px] transform rotate-3 ${
+              className={`bg-white border-2 rounded-lg shadow-2xl p-4 opacity-95 min-w-[140px] sm:min-w-[220px] transform rotate-3 ${
                 draggedNode.color.includes("red")
                   ? "border-red-500"
                   : draggedNode.color.includes("blue")
@@ -1250,14 +1256,14 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                   : "border-gray-500"
               }`}
             >
-              <Card className="w-full h-20 shadow-lg">
-                <CardContent className="p-3 flex flex-col items-center justify-center h-full">
+              <Card className="w-full h-16 sm:h-20 shadow-lg">
+                <CardContent className="p-2 sm:p-3 flex flex-col items-center justify-center h-full">
                   <div
-                    className={`w-8 h-8 rounded-full ${draggedNode.color} flex items-center justify-center mb-2`}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full ${draggedNode.color} flex items-center justify-center mb-1 sm:mb-2`}
                   >
                     {draggedNode.icon}
                   </div>
-                  <span className="text-sm font-medium text-center leading-tight">
+                  <span className="text-xs sm:text-sm font-medium text-center leading-tight">
                     {draggedNode.label}
                   </span>
                 </CardContent>
