@@ -426,14 +426,15 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
         id="left"
         type="source"
         position={Position.Left}
-        className="w-6 h-6 bg-purple-500"
+        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+        style={{ width: 10, height: 10 }}
       />
       <Handle
         id="left-target"
         type="target"
         position={Position.Left}
-        className="w-6 h-6 bg-purple-500"
-        style={{ opacity: 0 }}
+        className="bg-purple-500"
+        style={{ opacity: 0, width: 10, height: 10 }}
       />
 
       {/* Right Handle - both source and target */}
@@ -441,14 +442,15 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
         id="right"
         type="source"
         position={Position.Right}
-        className="w-6 h-6 bg-purple-500"
+        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+        style={{ width: 10, height: 10 }}
       />
       <Handle
         id="right-target"
         type="target"
         position={Position.Right}
-        className="w-6 h-6 bg-purple-500"
-        style={{ opacity: 0 }}
+        className="bg-purple-500"
+        style={{ opacity: 0, width: 10, height: 10 }}
       />
 
       {/* Top Handle - both source and target */}
@@ -456,14 +458,15 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
         id="top"
         type="source"
         position={Position.Top}
-        className="w-6 h-6 bg-purple-500"
+        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+        style={{ width: 10, height: 10 }}
       />
       <Handle
         id="top-target"
         type="target"
         position={Position.Top}
-        className="w-6 h-6 bg-purple-500"
-        style={{ opacity: 0 }}
+        className="bg-purple-500"
+        style={{ opacity: 0, width: 10, height: 10 }}
       />
 
       {/* Bottom Handle - both source and target */}
@@ -471,14 +474,15 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
         id="bottom"
         type="source"
         position={Position.Bottom}
-        className="w-6 h-6 bg-purple-500"
+        className="bg-purple-500 hover:bg-purple-600 transition-colors cursor-pointer z-10"
+        style={{ width: 10, height: 10 }}
       />
       <Handle
         id="bottom-target"
         type="target"
         position={Position.Bottom}
-        className="w-6 h-6 bg-purple-500"
-        style={{ opacity: 0 }}
+        className="bg-purple-500"
+        style={{ opacity: 0, width: 10, height: 10 }}
       />
 
       {/* Modais de confirmação */}
