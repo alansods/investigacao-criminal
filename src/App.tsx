@@ -42,9 +42,9 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
         <div className="container flex h-12 sm:h-14 lg:h-16 max-w-screen-2xl items-center px-4 sm:px-6 lg:px-8">
           <div className="mr-2 sm:mr-4 flex items-center">
             <HatGlasses className="h-5 w-5 sm:h-6 sm:w-6 mr-1 sm:mr-2" />
@@ -90,7 +90,7 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-0">
+      <main className="flex-1 min-h-0 overflow-hidden">
         <InvestigationCanvas ref={canvasRef} />
       </main>
 

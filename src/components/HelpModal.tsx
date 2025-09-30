@@ -15,19 +15,21 @@ interface HelpModalProps {
 export const HelpModal = ({ isOpen, onClose }: HelpModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <HelpCircle className="h-6 w-6 text-blue-600" />
-            <DialogTitle className="text-lg font-semibold">
-              Como Usar o Sistema de Investigação
-            </DialogTitle>
-          </div>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] md:max-h-[80vh] overflow-hidden flex flex-col p-0">
+        <div className="px-6 pt-6">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <HelpCircle className="h-6 w-6 text-blue-600" />
+              <DialogTitle className="text-lg font-semibold">
+                Como Usar o Sistema de Investigação
+              </DialogTitle>
+            </div>
+          </DialogHeader>
 
-        <div className="border-t mt-4"></div>
+          <div className="border-t mt-4"></div>
+        </div>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-4 px-6 overflow-y-auto flex-1">
           {/* Adicionar Categorias */}
           <section>
             <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -224,7 +226,7 @@ export const HelpModal = ({ isOpen, onClose }: HelpModalProps) => {
           </section>
         </div>
 
-        <div className="flex justify-end pt-4 border-t">
+        <div className="flex justify-end pt-4 pb-6 px-6 border-t bg-white">
           <Button onClick={onClose} className="px-6">
             Entendi
           </Button>
