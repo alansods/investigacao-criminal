@@ -1160,7 +1160,7 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
                       connectionMode={ConnectionMode.Strict}
                     >
                       <Controls />
-                      <MiniMap />
+                      <MiniMap className="minimap-responsive" />
                       <Background
                         variant={BackgroundVariant.Dots}
                         gap={12}

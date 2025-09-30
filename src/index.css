@@ -99,3 +99,21 @@
   scrollbar-width: none; /* Firefox */
 }
 
+/* Responsive MiniMap size */
+.minimap-responsive {
+  width: 120px;
+  height: 80px;
+}
+@media (min-width: 640px) {
+  .minimap-responsive {
+    width: 150px;
+    height: 100px;
+  }
+}
+@media (min-width: 1024px) {
+  .minimap-responsive {
+    width: 180px;
+    height: 120px;
+  }
+}
+
