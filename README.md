@@ -2,6 +2,12 @@
 
 Um aplicativo moderno para organização e visualização de investigações criminais usando React, TypeScript, Tailwind CSS, shadcn/ui, React Flow e React DnD Kit.
 
+## 🌐 Live Preview
+
+**🔗 [Ver Demo Online](https://investigacao-criminal.vercel.app/)**
+
+Acesse o link acima para testar todas as funcionalidades do sistema em tempo real!
+
 ## 🚀 Tecnologias
 
 - **React 18** - Biblioteca de interface de usuário
