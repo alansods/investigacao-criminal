@@ -35,7 +35,7 @@ import InvestigationNode from "./InvestigationNode";
 import InvestigationToolbox from "./InvestigationToolbox";
 import { DeleteConnectionModal } from "./DeleteConnectionModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Clue } from "@/types/investigation";
+import type { Clue, MediaType } from "@/types/investigation";
 
 import "@xyflow/react/dist/style.css";
 
@@ -419,6 +419,43 @@ const InvestigationCanvas = () => {
     [setNodes]
   );
 
+  const handleUpdateClue = useCallback(
+    (
+      groupId: string,
+      clueId: string,
+      updates: {
+        title: string;
+        content: string;
+        mediaType: MediaType;
+        mediaUrl?: string;
+      }
+    ) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== groupId) return node;
+          const clues = ((node.data as any).clues || []) as Clue[];
+          const updatedClues = clues.map((c) =>
+            c.id === clueId
+              ? {
+                  ...c,
+                  title: updates.title,
+                  content: updates.content,
+                  mediaType: updates.mediaType,
+                  mediaUrl: updates.mediaUrl,
+                  updatedAt: new Date(),
+                }
+              : c
+          );
+          return {
+            ...node,
+            data: { ...(node.data as any), clues: updatedClues },
+          };
+        })
+      );
+    },
+    [setNodes]
+  );
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       // Guardar coordenadas absolutas de tela; screenToFlowPosition espera coords relativas à janela
@@ -471,6 +508,8 @@ const InvestigationCanvas = () => {
     window.addEventListener("pointermove", handlePointerMove);
     // Store remover on window for cleanup on drop
     (window as any)._rf_handlePointerMove = handlePointerMove;
+    // Ensure grabbing cursor while dragging from toolbox
+    document.body.style.cursor = "grabbing";
   };
 
   const onDragEnd = (event: DragEndEvent) => {
@@ -502,6 +541,8 @@ const InvestigationCanvas = () => {
       (window as any)._rf_handlePointerMove = null;
     }
     setPointerPos(null);
+    // Restore cursor
+    document.body.style.cursor = "";
 
     const newNode: Node = {
       id: `group-${Date.now()}`,
@@ -536,66 +577,49 @@ const InvestigationCanvas = () => {
       )}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragCancel={() => {
+        setDraggedNode(null);
+        const stored = (window as any)._rf_handlePointerMove as
+          | ((e: PointerEvent) => void)
+          | null;
+        if (stored) {
+          window.removeEventListener("pointermove", stored);
+          (window as any)._rf_handlePointerMove = null;
+        }
+        setPointerPos(null);
+        document.body.style.cursor = "";
+      }}
     >
       <div
         className={`flex h-full min-h-0 touch-none ${
           isDraggingOverCanvas
             ? "bg-blue-50 ring-2 ring-blue-200 ring-opacity-50"
             : ""
-        }`}
+        } ${draggedNode || draggedItem ? "dragging" : ""}`}
       >
         {/* Toolbox */}
         <div className="w-64 bg-muted/50 p-4 border-r">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">
-                Ferramentas de Investigação
+                Categorias de Investigação
               </CardTitle>
+              <span className="text-xs text-muted-foreground">
+                Arraste e solte para adicionar uma nova categoria
+              </span>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground">
-                  Categorias
-                </h4>
 
-                <span className="text-xs text-muted-foreground">
-                  Arraste e solte para adicionar uma nova categoria
-                </span>
-                {investigationTypes.map((nodeType) => (
-                  <InvestigationToolbox
-                    key={nodeType.id}
-                    id={nodeType.id}
-                    type={nodeType.type}
-                    label={nodeType.label}
-                    icon={nodeType.icon}
-                    color={nodeType.color}
-                  />
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground">
-                  Tipos de Pistas
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center gap-2 p-2 rounded border text-xs">
-                    <FileText className="h-3 w-3 text-blue-600" />
-                    Texto
-                  </div>
-                  <div className="flex items-center gap-2 p-2 rounded border text-xs">
-                    <Image className="h-3 w-3 text-green-600" />
-                    Imagem
-                  </div>
-                  <div className="flex items-center gap-2 p-2 rounded border text-xs">
-                    <Video className="h-3 w-3 text-purple-600" />
-                    Vídeo
-                  </div>
-                  <div className="flex items-center gap-2 p-2 rounded border text-xs">
-                    <Volume2 className="h-3 w-3 text-orange-600" />
-                    Áudio
-                  </div>
-                </div>
-              </div>
+            <CardContent className="space-y-3 mt-4">
+              {investigationTypes.map((nodeType) => (
+                <InvestigationToolbox
+                  key={nodeType.id}
+                  id={nodeType.id}
+                  type={nodeType.type}
+                  label={nodeType.label}
+                  icon={nodeType.icon}
+                  color={nodeType.color}
+                />
+              ))}
             </CardContent>
           </Card>
         </div>
@@ -694,6 +718,7 @@ const InvestigationCanvas = () => {
                       onDeleteGroup: handleDeleteGroup,
                       onDeleteClue: handleDeleteClue,
                       onAddClue: handleAddClue,
+                      onUpdateClue: handleUpdateClue,
                       onReorderClues: handleReorderClues,
                       onMoveClue: handleMoveClue,
                       groupId: node.id,

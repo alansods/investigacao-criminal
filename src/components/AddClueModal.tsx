@@ -100,7 +100,8 @@ export const AddClueModal = ({
 
           <div className="space-y-1 sm:space-y-2">
             <label htmlFor="content" className="text-xs sm:text-sm font-medium">
-              Conteúdo
+              Conteúdo{" "}
+              <span className="text-xs text-muted-foreground">(opcional)</span>
             </label>
             <Textarea
               id="content"

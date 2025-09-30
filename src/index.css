@@ -67,3 +67,11 @@
 
 }
 
+/* Keep grabbing cursor on React Flow canvas while dragging */
+.dragging .react-flow__pane,
+.dragging .react-flow__renderer,
+.dragging .react-flow__container,
+.dragging .react-flow__viewport {
+  cursor: grabbing !important;
+}
+

@@ -48,6 +48,16 @@ export interface InvestigationNodeData {
   ) => void;
   onReorderClues?: (groupId: string, orderedIds: string[]) => void;
   onMoveClue?: (clueId: string, fromGroupId: string, toGroupId: string) => void;
+  onUpdateClue?: (
+    groupId: string,
+    clueId: string,
+    updates: {
+      title: string;
+      content: string;
+      mediaType: MediaType;
+      mediaUrl?: string;
+    }
+  ) => void;
   groupId?: string;
   draggedItem?: string | null;
 }
@@ -121,6 +131,12 @@ function SortableClue({
 
 const InvestigationNode = memo(({ data, selected }: NodeProps) => {
   const [editingClueId, setEditingClueId] = useState<string | null>(null);
+  const [draftClue, setDraftClue] = useState<{
+    title: string;
+    content: string;
+    mediaType: MediaType;
+    mediaUrl?: string;
+  } | null>(null);
   const [addClueModal, setAddClueModal] = useState(false);
   const [deleteGroupModal, setDeleteGroupModal] = useState(false);
   const [deleteClueModal, setDeleteClueModal] = useState<{
@@ -166,10 +182,20 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
       e.stopPropagation();
     }
     setEditingClueId(clueId);
+    const clue = nodeData.clues?.find((c) => c.id === clueId);
+    if (clue) {
+      setDraftClue({
+        title: clue.title,
+        content: clue.content,
+        mediaType: clue.mediaType,
+        mediaUrl: clue.mediaUrl || "",
+      });
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingClueId(null);
+    setDraftClue(null);
   };
 
   const handleDeleteGroup = (e: React.MouseEvent) => {
@@ -202,6 +228,17 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
     if (nodeData.onDeleteClue) {
       nodeData.onDeleteClue(deleteClueModal.clueId);
     }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingClueId || !nodeData.groupId || !draftClue) return;
+    // Validação: não permitir salvar sem título
+    if (!draftClue.title.trim()) return;
+    if (nodeData.onUpdateClue) {
+      nodeData.onUpdateClue(nodeData.groupId, editingClueId, draftClue);
+    }
+    setEditingClueId(null);
+    setDraftClue(null);
   };
 
   return (
@@ -274,30 +311,40 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
                         <CardContent className="p-3 space-y-3">
                           <input
                             type="text"
-                            value={clue.title}
+                            value={draftClue?.title ?? ""}
                             onChange={(e) =>
-                              console.log("Update title:", e.target.value)
+                              setDraftClue((prev) =>
+                                prev ? { ...prev, title: e.target.value } : prev
+                              )
                             }
                             className="w-full px-2 py-1 border rounded text-sm font-medium"
                             placeholder="Título da pista"
                           />
 
                           <textarea
-                            value={clue.content}
+                            value={draftClue?.content ?? ""}
                             onChange={(e) =>
-                              console.log("Update content:", e.target.value)
+                              setDraftClue((prev) =>
+                                prev
+                                  ? { ...prev, content: e.target.value }
+                                  : prev
+                              )
                             }
                             className="w-full px-2 py-1 border rounded text-sm min-h-[60px] resize-none"
-                            placeholder="Conteúdo da pista"
+                            placeholder="Conteúdo da pista (opcional)"
                           />
 
                           <div className="flex items-center gap-2">
                             <select
-                              value={clue.mediaType}
+                              value={draftClue?.mediaType ?? "text"}
                               onChange={(e) =>
-                                console.log(
-                                  "Update media type:",
-                                  e.target.value
+                                setDraftClue((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        mediaType: e.target.value as MediaType,
+                                      }
+                                    : prev
                                 )
                               }
                               className="px-2 py-1 border rounded text-xs"
@@ -308,14 +355,15 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
                               <option value="audio">Áudio</option>
                             </select>
 
-                            {clue.mediaType !== "text" && (
+                            {draftClue?.mediaType !== "text" && (
                               <input
                                 type="url"
-                                value={clue.mediaUrl || ""}
+                                value={draftClue?.mediaUrl || ""}
                                 onChange={(e) =>
-                                  console.log(
-                                    "Update media URL:",
-                                    e.target.value
+                                  setDraftClue((prev) =>
+                                    prev
+                                      ? { ...prev, mediaUrl: e.target.value }
+                                      : prev
                                   )
                                 }
                                 placeholder="URL da mídia"
@@ -332,8 +380,13 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
                               Cancelar
                             </button>
                             <button
-                              onClick={() => handleSaveClue(clue)}
-                              className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                              onClick={handleSaveEdit}
+                              disabled={!draftClue?.title.trim()}
+                              className={`px-3 py-1 text-xs rounded ${
+                                draftClue?.title.trim()
+                                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              }`}
                             >
                               Salvar
                             </button>
@@ -368,39 +421,64 @@ const InvestigationNode = memo(({ data, selected }: NodeProps) => {
         </CardContent>
       </Card>
 
+      {/* Left Handle - both source and target */}
       <Handle
+        id="left"
+        type="source"
+        position={Position.Left}
+        className="w-6 h-6 bg-purple-500"
+      />
+      <Handle
+        id="left-target"
         type="target"
         position={Position.Left}
-        className="w-6 h-6 bg-blue-500"
+        className="w-6 h-6 bg-purple-500"
+        style={{ opacity: 0 }}
       />
+
+      {/* Right Handle - both source and target */}
       <Handle
-        id="target-top"
-        type="target"
-        position={Position.Top}
-        className="w-6 h-6 bg-blue-500"
-      />
-      <Handle
-        id="target-bottom"
-        type="target"
-        position={Position.Bottom}
-        className="w-6 h-6 bg-blue-500"
-      />
-      <Handle
+        id="right"
         type="source"
         position={Position.Right}
-        className="w-6 h-6 bg-green-500"
+        className="w-6 h-6 bg-purple-500"
       />
       <Handle
-        id="source-top"
+        id="right-target"
+        type="target"
+        position={Position.Right}
+        className="w-6 h-6 bg-purple-500"
+        style={{ opacity: 0 }}
+      />
+
+      {/* Top Handle - both source and target */}
+      <Handle
+        id="top"
         type="source"
         position={Position.Top}
-        className="w-6 h-6 bg-green-500"
+        className="w-6 h-6 bg-purple-500"
       />
       <Handle
-        id="source-bottom"
+        id="top-target"
+        type="target"
+        position={Position.Top}
+        className="w-6 h-6 bg-purple-500"
+        style={{ opacity: 0 }}
+      />
+
+      {/* Bottom Handle - both source and target */}
+      <Handle
+        id="bottom"
         type="source"
         position={Position.Bottom}
-        className="w-6 h-6 bg-green-500"
+        className="w-6 h-6 bg-purple-500"
+      />
+      <Handle
+        id="bottom-target"
+        type="target"
+        position={Position.Bottom}
+        className="w-6 h-6 bg-purple-500"
+        style={{ opacity: 0 }}
       />
 
       {/* Modais de confirmação */}
