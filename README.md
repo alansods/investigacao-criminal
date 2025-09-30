@@ -186,7 +186,7 @@ Categoria para pessoas de interesse na investigação
 ### 🎬 Cronologia
 Categoria para organizar eventos temporalmente
 - Cor: Verde
-- Ícone: Vídeo
+- Ícone: Histórico
 - Exemplos: Linha do tempo, sequência de eventos, horários
 
 ## ⚠️ Regras Importantes

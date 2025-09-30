@@ -60,7 +60,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { FileText, Image, Video, Volume2, HelpCircle } from "lucide-react";
+import { FileText, Image, History, Volume2, HelpCircle } from "lucide-react";
 import InvestigationNode from "./InvestigationNode";
 import InvestigationToolbox from "./InvestigationToolbox";
 import { DeleteConnectionModal } from "./DeleteConnectionModal";
@@ -91,7 +91,7 @@ function getIconForCategory(label: string): React.ReactNode {
     return <Image className="w-4 h-4 text-yellow-600" />;
   }
   if (lowerLabel.includes("cronologia") || lowerLabel.includes("timeline")) {
-    return <Video className="w-4 h-4 text-green-600" />;
+    return <History className="w-4 h-4 text-green-600" />;
   }
   return <FileText className="w-4 h-4 text-red-600" />;
 }
@@ -417,7 +417,7 @@ const InvestigationCanvas = forwardRef<InvestigationCanvasRef>(
           id: "timeline",
           type: "investigation",
           label: "Cronologia",
-          icon: <Video className="w-4 h-4 text-green-600" />,
+          icon: <History className="w-4 h-4 text-green-600" />,
           color: "bg-green-100",
         },
       ],
